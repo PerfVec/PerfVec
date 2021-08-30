@@ -18,55 +18,33 @@ from models import *
 from cfg import *
 
 
-lat_loss_fn = nn.MSELoss()
-cla_loss_fn = nn.CrossEntropyLoss()
+loss_fn = nn.MSELoss()
 
 
 class ModelSet:
-    def __init__(self, idx, name, model, optimizer, regression):
+    def __init__(self, idx, name, model, optimizer):
         self.idx = idx
         self.name = name
         self.model = model
         self.optimizer = optimizer
-        self.regression = regression
         self.min_loss = float("inf")
         self.cur_loss = 0
-        self.total_lat_loss = 0
-        self.total_cla_loss1 = 0
-        self.total_cla_loss2 = 0
-        self.total_cla_loss3 = 0
-
-
-def combine_loss(lat_loss, cla_loss1, cla_loss2, cla_loss3):
-    return 0.02 * lat_loss + 2 * cla_loss1 + cla_loss2 + cla_loss3
+        self.total_loss = 0
 
 
 def train_mul(args, models, device, train_loader, epoch, rank):
     for ms in models:
         ms.model.train()
-        ms.total_lat_loss = 0
-        ms.total_cla_loss1 = 0
-        ms.total_cla_loss2 = 0
-        ms.total_cla_loss3 = 0
+        ms.total_loss = 0
     start_t = time.time()
     print_threshold = max(len(train_loader) // 100, 1)
-    for batch_idx, (data, lat_target, cla_target, para) in enumerate(train_loader):
-        data, lat_target, cla_target, para = data.to(device), lat_target.to(device), cla_target.to(device), para.to(device)
+    for batch_idx, (data, target) in enumerate(train_loader):
+        data, target = data.to(device), target.to(device)
         for ms in models:
             ms.optimizer.zero_grad()
-            output = ms.model(data, para)
-            lat_loss = lat_loss_fn(output[:,0:3], lat_target)
-            if not ms.regression:
-                cla_loss1 = cla_loss_fn(output[:,3:3+num_classes], cla_target[:,0])
-                cla_loss2 = cla_loss_fn(output[:,3+num_classes:3+2*num_classes], cla_target[:,1])
-                cla_loss3 = cla_loss_fn(output[:,3+2*num_classes:3+3*num_classes], cla_target[:,2])
-                loss = combine_loss(lat_loss, cla_loss1, cla_loss2, cla_loss3)
-                ms.total_cla_loss1 += cla_loss1.item()
-                ms.total_cla_loss2 += cla_loss2.item()
-                ms.total_cla_loss3 += cla_loss3.item()
-            else:
-                loss = lat_loss
-            ms.total_lat_loss += lat_loss.item()
+            output = ms.model(data)
+            loss = loss_fn(output, target)
+            ms.total_loss += loss.item()
             loss.backward()
             ms.optimizer.step()
         if batch_idx % print_threshold == print_threshold - 1 and rank == 0:
@@ -79,48 +57,26 @@ def train_mul(args, models, device, train_loader, epoch, rank):
     if args.distributed:
         dist.barrier()
     for ms in models:
-        ms.total_lat_loss /= len(train_loader)
-        if not ms.regression:
-            ms.total_cla_loss1 /= len(train_loader)
-            ms.total_cla_loss2 /= len(train_loader)
-            ms.total_cla_loss3 /= len(train_loader)
-            print('Train Epoch {} {}: {} \tLat Loss: {:.6f} \tCla Loss1: {:.6f} \tCla Loss2: {:.6f} \tCla Loss3: {:.6f} \tTime: {:.1f}'.format(
-                epoch, ms.idx, rank, ms.total_lat_loss, ms.total_cla_loss1, ms.total_cla_loss2, ms.total_cla_loss3, end_t - start_t), flush=True)
-        else:
-            print('Train Epoch {} {}: {} \tLat Loss: {:.6f} \tTime: {:.1f}'.format(
-                epoch, ms.idx, rank, ms.total_lat_loss, end_t - start_t), flush=True)
+        ms.total_loss /= len(train_loader)
+        print('Train Epoch {} {}: {} \tLoss: {:.6f} \tTime: {:.1f}'.format(
+            epoch, ms.idx, rank, ms.total_loss, end_t - start_t), flush=True)
 
 
 def test_mul(args, models, device, test_loader, rank):
     for ms in models:
         ms.model.eval()
-        ms.total_lat_loss = 0
-        ms.total_cla_loss1 = 0
-        ms.total_cla_loss2 = 0
-        ms.total_cla_loss3 = 0
+        ms.total_loss = 0
     with torch.no_grad():
-        for data, lat_target, cla_target, para in test_loader:
-            data, lat_target, cla_target, para = data.to(device), lat_target.to(device), cla_target.to(device), para.to(device)
+        for data, target in test_loader:
+            data, target = data.to(device), target.to(device)
             for ms in models:
-                output = ms.model(data, para)
-                ms.total_lat_loss += lat_loss_fn(output[:,0:3], lat_target).item()
-                if not ms.regression:
-                    ms.total_cla_loss1 += cla_loss_fn(output[:,3:3+num_classes], cla_target[:,0]).item()
-                    ms.total_cla_loss2 += cla_loss_fn(output[:,3+num_classes:3+2*num_classes], cla_target[:,1]).item()
-                    ms.total_cla_loss3 += cla_loss_fn(output[:,3+2*num_classes:3+3*num_classes], cla_target[:,2]).item()
+                output = ms.model(data)
+                ms.total_loss += loss_fn(output, target).item()
     for ms in models:
-        ms.total_lat_loss /= len(test_loader)
-        if not ms.regression:
-            ms.total_cla_loss1 /= len(test_loader)
-            ms.total_cla_loss2 /= len(test_loader)
-            ms.total_cla_loss3 /= len(test_loader)
-            ms.cur_loss = combine_loss(ms.total_lat_loss, ms.total_cla_loss1, ms.total_cla_loss2, ms.total_cla_loss3)
-            print('Test set {} {}: Lat Loss: {:.6f} \tCla Loss1: {:.6f} \tCla Loss2: {:.6f} \tCla Loss3: {:.6f} \tCombined Loss: {:.6f}'.format(
-                ms.idx, rank, ms.total_lat_loss, ms.total_cla_loss1, ms.total_cla_loss2, ms.total_cla_loss3, ms.cur_loss), flush=True)
-        else:
-            ms.cur_loss = ms.total_lat_loss
-            print('Test set {} {}: Lat Loss: {:.6f}'.format(
-                ms.idx, rank, ms.total_lat_loss), flush=True)
+        ms.total_loss /= len(test_loader)
+        ms.cur_loss = ms.total_loss
+        print('Test set {} {}: Lat Loss: {:.6f}'.format(
+            ms.idx, rank, ms.total_loss), flush=True)
 
 
 def save_checkpoint(name, model, optimizer, epoch, best_loss, best=False):
@@ -178,8 +134,8 @@ def main_rank(rank, args):
     dataset1 = MemMappedDataset(data_file_name, total_size, 0, args.train_size)
     dataset2 = MemMappedDataset(data_file_name, total_size, valid_start, valid_end)
     #print(dataset1[0][0].size())
+    #print(dataset1[0][1].size())
     #print(dataset1[0])
-    #print(dataset1[0][0][1838:1861])
     #print(dataset1[1])
     #exit()
     kwargs = {'batch_size': args.batch_size}
@@ -204,17 +160,7 @@ def main_rank(rank, args):
     for name in args.models:
         model = eval(name)
         if rank == 0:
-            profile_model(model, para=True)
-        regression = False
-        model.eval()
-        output = model(torch.ones(1, context_length * inst_length), torch.ones(1, 1))
-        if output.size()[1] == 3:
-            regression = True
-            if rank == 0:
-                print("Regression model")
-        else:
-            if rank == 0:
-                print("Classification model")
+            profile_model(model)
         device = torch.device("cuda" if use_cuda else "cpu")
         if args.distributed:
             device = rank
@@ -226,7 +172,7 @@ def main_rank(rank, args):
         else:
             model.to(device)
         optimizer = optim.Adam(model.parameters())
-        models.append(ModelSet(i, name, model, optimizer, regression))
+        models.append(ModelSet(i, name, model, optimizer))
         i += 1
         #ori_lr = optimizer.defaults['lr']
     start_epoch = 1
@@ -266,9 +212,9 @@ def main_rank(rank, args):
 def main():
     # Training settings
     parser = argparse.ArgumentParser(description='Trace2Vec Training')
-    parser.add_argument('--batch-size', type=int, default=1024*64, metavar='N',
-                        help='input batch size (default: 1024*64)')
-    parser.add_argument('--train-size', type=int, default=1024*64, metavar='N',
+    parser.add_argument('--batch-size', type=int, default=4096, metavar='N',
+                        help='input batch size (default: 4096)')
+    parser.add_argument('--train-size', type=int, default=4096, metavar='N',
                         help='input size for training')
     parser.add_argument('--epochs', type=int, default=100, metavar='N',
                         help='number of epochs to train (default: 100)')

@@ -10,5 +10,6 @@ run*
 models
 res
 log
+checkpoints
 stats
 DP/buildSeq
