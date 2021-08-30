@@ -184,6 +184,7 @@ void Inst::dump(Tick startTick, int *out) {
         out[22] = MAX_DIS;
       assert(out[22] > 0);
     }
+    // FIXME: number of memory accesses instead?
     dataMap[addr] = curInstNum;
     // Data address cache line distance.
     mapIter = dataLineMap.find(getLine(addr));

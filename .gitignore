@@ -1,0 +1,14 @@
+*.log
+*.swp
+*~
+*#
+*.pyc
+__pycache__
+data*
+tmp*
+run*
+models
+res
+log
+stats
+DP/buildSeq
