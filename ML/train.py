@@ -75,15 +75,19 @@ def test_mul(args, models, device, test_loader, rank):
     for ms in models:
         ms.total_loss /= len(test_loader)
         ms.cur_loss = ms.total_loss
-        print('Test set {} {}: Lat Loss: {:.6f}'.format(
+        print('Test set {} {}: Loss: {:.6f}'.format(
             ms.idx, rank, ms.total_loss), flush=True)
 
 
-def save_checkpoint(name, model, optimizer, epoch, best_loss, best=False):
-    if best:
-        name = 'checkpoints/' + generate_model_name(name) + '_best.pt'
+def save_checkpoint(name, model, optimizer, epoch, best_loss, lr, best=False):
+    if lr != 0:
+        lr_name = '_lr' + str(lr)
     else:
-        name = 'checkpoints/' + generate_model_name(name, epoch) + '.pt'
+        lr_name = ''
+    if best:
+        name = 'checkpoints/' + generate_model_name(name) + lr_name + '_best.pt'
+    else:
+        name = 'checkpoints/' + generate_model_name(name, epoch) + lr_name + '.pt'
     saved_dict = {'epoch': epoch,
                   'best_loss': best_loss,
                   'optimizer_state_dict': optimizer.state_dict()}
@@ -174,7 +178,10 @@ def main_rank(rank, args):
             model = nn.DataParallel(model).to(device)
         else:
             model.to(device)
-        optimizer = optim.Adam(model.parameters())
+        if args.lr != 0:
+            optimizer = optim.Adam(model.parameters(), lr=args.lr)
+        else:
+            optimizer = optim.Adam(model.parameters())
         models.append(ModelSet(i, name, model, optimizer))
         i += 1
         #ori_lr = optimizer.defaults['lr']
@@ -202,9 +209,9 @@ def main_rank(rank, args):
                     print("Find new minimal loss", ms.cur_loss, "to replace", ms.min_loss, "of model", ms.idx)
                     ms.min_loss = ms.cur_loss
                     if not args.no_save_model:
-                        save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, True)
+                        save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args.lr, True)
                 if (not args.no_save_model) and epoch % args.save_interval == 0:
-                    save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss)
+                    save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args.lr)
         #scheduler.step()
 
     if args.distributed:
@@ -221,6 +228,8 @@ def main():
                         help='input size for training')
     parser.add_argument('--epochs', type=int, default=100, metavar='N',
                         help='number of epochs to train (default: 100)')
+    parser.add_argument('--lr', type=float, default=0, metavar='N',
+                        help='initial learning rate')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
     parser.add_argument('--dry-run', action='store_true', default=False,
