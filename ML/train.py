@@ -131,11 +131,14 @@ def main_rank(rank, args):
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     torch.manual_seed(args.seed)
 
-    dataset1 = MemMappedDataset(data_file_name, total_size, 0, args.train_size)
-    dataset2 = MemMappedDataset(data_file_name, total_size, valid_start, valid_end)
+    #dataset1 = MemMappedDataset(data_file_name, total_size, 0, args.train_size)
+    #dataset2 = MemMappedDataset(data_file_name, total_size, valid_start, valid_end)
+    dataset1 = CombinedMMDataset(4, 0, args.train_size)
+    dataset2 = CombinedMMDataset(4, valid_start, valid_end)
     #print(dataset1[0][0].size())
-    #print(dataset1[0][1].size())
     #print(dataset1[0])
+    #print(dataset1[12686])
+    #print(dataset2[0])
     #print(dataset1[1])
     #exit()
     kwargs = {'batch_size': args.batch_size}
