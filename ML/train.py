@@ -46,6 +46,7 @@ def train_mul(args, models, device, train_loader, epoch, rank):
             loss = loss_fn(output, target)
             ms.total_loss += loss.item()
             loss.backward()
+            nn.utils.clip_grad_norm_(ms.model.parameters(), args.clip)
             ms.optimizer.step()
         if batch_idx % print_threshold == print_threshold - 1 and rank == 0:
             print('.', flush=True, end='')
@@ -230,6 +231,8 @@ def main():
                         help='number of epochs to train (default: 100)')
     parser.add_argument('--lr', type=float, default=0, metavar='N',
                         help='initial learning rate')
+    parser.add_argument('--clip', type=float, default=0.5, metavar='N',
+                        help='gradient normalization value (default: 0.5)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
     parser.add_argument('--dry-run', action='store_true', default=False,
