@@ -21,6 +21,7 @@ def analyze(args, output, target, data):
     target = target.detach().numpy()
     data = data.detach().numpy()
     output = output.detach().numpy()
+    np.set_printoptions(suppress=True)
     print(output.shape)
     for i in range(tgt_length):
         cur_output = output[:,:,i]
@@ -107,7 +108,8 @@ def main():
     torch.manual_seed(args.seed)
 
     #dataset = MemMappedDataset(data_file_name, total_size, test_start, test_end)
-    dataset = CombinedMMDataset(4, test_start, test_end)
+    #dataset = CombinedMMDataset(4, test_start, test_end)
+    dataset = MemMappedDataset(datasets[5][0], datasets[5][1], test_start, test_end)
     kwargs = {'batch_size': args.batch_size,
               'shuffle': False}
     if use_cuda:
