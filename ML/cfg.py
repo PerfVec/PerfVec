@@ -7,7 +7,8 @@ datasets = [
   (data_set_dir + '508.namd_r.seq.mmap', 1079195),
   (data_set_dir + '500.perlbench_r.seq.mmap', 1158521),
   (data_set_dir + '502.gcc_r.seq.mmap', 15836),
-  (data_set_dir + '999.specrand_ir.seq.mmap', 57694)
+  (data_set_dir + '999.specrand_ir.seq.mmap', 57694),
+  (data_set_dir + 'all.mmap', 3264625)
 ]
 
 data_item_format = np.uint16
