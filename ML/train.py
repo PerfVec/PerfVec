@@ -150,7 +150,11 @@ def main_rank(rank, args):
     #exit()
     kwargs = {'batch_size': args.batch_size}
     if use_cuda:
-        cuda_kwargs = {'num_workers': 0,
+        if args.distributed:
+            num_workers = 0
+        else:
+            num_workers = 2
+        cuda_kwargs = {'num_workers': num_workers,
                        'pin_memory': True,
                        'shuffle': False}
         kwargs.update(cuda_kwargs)
