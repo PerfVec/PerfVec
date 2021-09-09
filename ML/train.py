@@ -46,7 +46,7 @@ def train_mul(args, models, device, train_loader, epoch, rank):
             loss = loss_fn(output, target)
             ms.total_loss += loss.item()
             loss.backward()
-            if args.clip is not 0:
+            if args.clip > 0:
                 nn.utils.clip_grad_norm_(ms.model.parameters(), args.clip)
             ms.optimizer.step()
         if batch_idx % print_threshold == print_threshold - 1 and rank == 0:
