@@ -7,17 +7,20 @@ from cfg import seq_length, input_length, tgt_length
 
 
 class SeqLSTM(nn.Module):
-  def __init__(self, nhidden, nlayers, nembed = 0, gru = False):
+  def __init__(self, nhidden, nlayers, nembed=0, gru=False, norm=False):
     super(SeqLSTM, self).__init__()
 
     if nembed != 0:
       self.embed = True
       self.inst_embed = nn.Linear(input_length, nembed)
-      self.inst_norm = nn.LayerNorm(seq_length)
       nin = nembed
     else:
       self.embed = False
       nin = input_length
+    self.norm = norm
+    if norm:
+      #self.inst_norm = nn.LayerNorm(seq_length)
+      self.inst_norm = nn.LayerNorm([seq_length, nin])
     if gru:
       self.lstm = nn.GRU(nin, nhidden, nlayers, batch_first=True)
     else:
@@ -34,7 +37,9 @@ class SeqLSTM(nn.Module):
   def forward(self, x):
     if self.embed:
       x = self.inst_embed(x)
-      x = F.relu(self.inst_norm(x.transpose(1, 2)).transpose(1, 2))
+    if self.norm:
+      #x = self.inst_norm(x.transpose(1, 2)).transpose(1, 2)
+      x = self.inst_norm(x)
     x, _ = self.lstm(x)
     x = self.linear(x)
     return x
