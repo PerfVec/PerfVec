@@ -84,7 +84,7 @@ def save_ts_model(name, model, device):
     assert 'checkpoints/' in name
     name = name.replace('checkpoints/', 'models/')
     model.eval()
-    traced_script_module = torch.jit.trace(model, torch.rand(1, context_length * inst_length).to(device))
+    traced_script_module = torch.jit.trace(model, torch.rand(1, seq_length, input_length).to(device))
     traced_script_module.save(name)
     print("Saved model", name)
 

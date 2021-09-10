@@ -24,6 +24,7 @@ valid_start = validbatchnum * ori_batch_size
 valid_end = (validbatchnum + validbatchsize) * ori_batch_size
 
 seq_length = 1024
-inst_length = 52
-tgt_length = 5
-input_length = inst_length - tgt_length
+input_length = 47
+tgt_length = 3
+input_start = 5
+inst_length = input_start + input_length

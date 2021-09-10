@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from torch.utils.data import Dataset
-from cfg import data_item_format, seq_length, inst_length, tgt_length, datasets
+from cfg import data_item_format, seq_length, inst_length, input_start, datasets
 
 
 class MemMappedDataset(Dataset):
@@ -22,8 +22,11 @@ class MemMappedDataset(Dataset):
             idx = idx.tolist()
 
         idx += self.start
-        x = np.copy(self.arr[idx, :, tgt_length:inst_length])
-        y = np.copy(self.arr[idx, :, 0:tgt_length])
+        x = np.copy(self.arr[idx, :, input_start:inst_length])
+        #y = np.copy(self.arr[idx, :, 0:input_start])
+        y = np.concatenate((self.arr[idx, :, 0], self.arr[idx, :, 2], self.arr[idx, :, 4]), axis=2)
+        y_diff = y[1:seq_length, :] - y[0:seq_length-1, :]
+        y[1:seq_length, :] = y_diff
         x = torch.from_numpy(x.astype('f'))
         y = torch.from_numpy(y.astype('f'))
         return x, y
