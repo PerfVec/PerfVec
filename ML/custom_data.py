@@ -24,7 +24,7 @@ class MemMappedDataset(Dataset):
         idx += self.start
         x = np.copy(self.arr[idx, :, input_start:inst_length])
         #y = np.copy(self.arr[idx, :, 0:input_start])
-        y = np.concatenate((self.arr[idx, :, 0], self.arr[idx, :, 2], self.arr[idx, :, 4]), axis=2)
+        y = np.concatenate((self.arr[idx, :, 0:1], self.arr[idx, :, 2:3], self.arr[idx, :, 4:5]), axis=1)
         y_diff = y[1:seq_length, :] - y[0:seq_length-1, :]
         y[1:seq_length, :] = y_diff
         x = torch.from_numpy(x.astype('f'))

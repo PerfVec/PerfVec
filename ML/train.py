@@ -147,7 +147,6 @@ def main_rank(rank, args):
     #print(dataset1[0])
     #print(dataset1[12686])
     #print(dataset2[0])
-    #print(dataset1[1])
     #exit()
     kwargs = {'batch_size': args.batch_size}
     if use_cuda:
