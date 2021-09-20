@@ -51,6 +51,11 @@ def analyze(args, output, target, data):
         flat_target = cur_target.ravel()
         print("Err avg, persentage, and std:", np.average(errs[errs != -1]), "\t", np.sum(errs[errs != -1]) / np.sum(flat_target[errs != -1]), "\t", np.std(errs[errs != -1]))
         print("data percentage:", errs[errs != -1].size / errs.size)
+        output_sum = np.sum(cur_output, axis=1)
+        target_sum = np.sum(cur_target, axis=1)
+        sum_errs = target_sum - output_sum
+        sum_errs[sum_errs < 0] = -sum_errs[sum_errs < 0]
+        print("Sum err avg, persentage, and std:", np.average(sum_errs), "\t", np.average(sum_errs / target_sum), "\t", np.std(sum_errs))
         his = np.histogram(errs, bins=range(-1, 100))
         print(his[0] / errs[errs != -1].size)
 
