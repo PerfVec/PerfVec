@@ -2,7 +2,7 @@ import sys
 import os
 import argparse
 import numpy as np
-from data_format import seq_length, inst_length
+from ML.cfg import seq_length, inst_length
 
 parser = argparse.ArgumentParser(description="Transform from text to memmap dataset")
 parser.add_argument('--start', type=int, default=0)
@@ -59,9 +59,9 @@ for i in range(len(args.fname)):
       if ninsts == seq_length:
         ninsts = 0
         nseqs += 1
-        if nseqs % 10000 == 0:
+        if nseqs % 1000 == 0:
           all_feats.flush()
-          print("Processed %d seqences." % nseqs, flush=True)
+          print('.', flush=True, end='')
       if end != 0 and nlines == end:
         assert ninsts == 0
         break
@@ -69,4 +69,5 @@ for i in range(len(args.fname)):
 
 
 all_feats.flush()
+print()
 print("Finished with", nseqs, "seqences,", nfilled, "lines,", bad_lines, "bad lines.")

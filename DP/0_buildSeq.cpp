@@ -11,10 +11,18 @@ using namespace std;
 
 // Current sequence status.
 int curInstNum;
-Tick curSqOutTick;
+Tick instIdx;
+Tick memLdIdx;
+Tick memStIdx;
+Tick lastFetchTick;
+Tick lastCommitTick;
+Tick lastSqOutTick;
 unordered_map<Addr, int> pcMap;
+unordered_map<Addr, Tick> pcLMap;
 unordered_map<Addr, int> dataMap;
 unordered_map<Addr, int> dataLineMap;
+unordered_map<Addr, Tick> dataLineLdMap;
+unordered_map<Addr, Tick> dataLineStMap;
 
 #define TICK_STEP 500
 Tick minCompleteLat = 100;
@@ -23,9 +31,11 @@ Tick minStoreLat = 100;
 int minOut = 100;
 int maxOut = 0;
 
-#include "inst_impl_q.h"
+#include "inst_impl.h"
 
 int main(int argc, char *argv[]) {
+  assert(TRAIN_INST_LEN == 61 && IN_REG_SRC_BEGIN == 33 &&
+         IN_REG_DST_BEGIN == 49 && IN_OP == 12 && IN_ST == 13);
   if (argc != 2) {
     cerr << "Usage: ./buildSeq <trace>" << endl;
     return 0;
@@ -52,8 +62,11 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
+  cerr << "Training data are " << SEQ_LEN << " by " << TRAIN_INST_LEN << ".\n";
   int *seq = new int[SEQ_LEN * TRAIN_INST_LEN];
+  int buf[TRAIN_INST_LEN];
 
+  // First fetch starts at the 2nd cycle.
   Tick curTick = 2;
   bool firstInst = true;
   Tick num = 0;
@@ -62,10 +75,18 @@ int main(int argc, char *argv[]) {
   Inst inst;
 
   curInstNum = 0;
-  curSqOutTick = 0;
+  instIdx = 0;
+  memLdIdx = 0;
+  memStIdx = 0;
+  lastFetchTick = 0;
+  lastCommitTick = 0;
+  lastSqOutTick = 0;
   pcMap.clear();
+  pcLMap.clear();
   dataMap.clear();
   dataLineMap.clear();
+  dataLineLdMap.clear();
+  dataLineStMap.clear();
   while (!trace.eof()) {
     Tick res = inst.read(trace, sqtrace);
     if (res == FILE_END)
@@ -77,14 +98,27 @@ int main(int argc, char *argv[]) {
         num++;
         if (num % 100000 == 0)
           cerr << ".";
-      } else
+        if (num % 10000000 == 0)
+          cerr << "\n";
+      } else {
+        // Update memory access maps etc.
+        inst.dump(curTick, &buf[0]);
         discardNum++;
+      }
+      instIdx++;
+      if (inst.isLoad())
+        memLdIdx++;
+      else if (inst.isStore())
+        memStIdx++;
     } else {
       assert(curInstNum == SEQ_LEN);
       seqNum++;
-      curTick = res;
+      // Fetch starts after 3 cycles.
+      curTick = res + 3;
       curInstNum = 0;
-      curSqOutTick = 0;
+      lastFetchTick = 0;
+      lastCommitTick = 0;
+      lastSqOutTick = 0;
       pcMap.clear();
       dataMap.clear();
       dataLineMap.clear();

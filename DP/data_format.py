@@ -1,7 +1,3 @@
-seq_length = 1024
-inst_length = 52
-tgt_length = 5
-
 # targets.
 tgt_fetch_lat = 0
 tgt_completion_lat = 1

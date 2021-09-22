@@ -9,9 +9,6 @@
 #define MAXREGCLASS 6
 #define MAXREGIDX 50
 
-#define SEQ_LEN 1024
-#define TRAIN_INST_LEN (24 + 2*SRCREGNUM + 2*DSTREGNUM)
-
 typedef long unsigned Tick;
 typedef long unsigned Addr;
 
@@ -52,6 +49,7 @@ struct Inst {
 
   // Instruction access.
   Addr pc;
+  int isBranching;
   int isMisPredict;
   int fetchDepth;
   int iwalkDepth[3];
@@ -76,14 +74,8 @@ struct Inst {
       return false;
   }
 
-  // Get ticks.
-  Tick robTick() { return inTick + outTick; }
-  Tick sqTick() {
-    if (sqOutTick == 0)
-      return inTick + storeTick;
-    else
-      return inTick + sqOutTick;
-  }
+  bool isLoad() { return (op == 47); }
+  bool isStore() { return (op == 48); }
 
   void dump(Tick startTick, int *out);
 };
