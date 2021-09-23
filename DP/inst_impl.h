@@ -3,7 +3,7 @@
 
 #define SEQ_LEN 1024
 #define MAX_DIS 1000
-#define MAX_LDIS 10000000
+#define MAX_LDIS 100000000
 
 enum trainDataIdx {
   TGT_FETCH = 0,
@@ -21,6 +21,7 @@ enum trainDataIdx {
   IN_BEGIN, // 12
   IN_OP = IN_BEGIN,
   IN_ST,
+  IN_LD,
   IN_MICRO,
   IN_COND_CTRL,
   IN_UNCOND_CTRL,
@@ -40,11 +41,11 @@ enum trainDataIdx {
   IN_DATA_LSTDIS,
   IN_DATA_SDIS,
   IN_DATA_SDIS_LINE,
-  IN_REG_SRC_BEGIN, // 33
+  IN_REG_SRC_BEGIN, // 34
   IN_REG_SRC_END = IN_REG_SRC_BEGIN + 2*SRCREGNUM - 1,
-  IN_REG_DST_BEGIN, // 49
+  IN_REG_DST_BEGIN, // 50
   IN_REG_DST_END = IN_REG_DST_BEGIN + 2*DSTREGNUM - 1,
-  TRAIN_INST_LEN // 61
+  TRAIN_INST_LEN // 62
 };
 
 inline Addr getLine(Addr in) { return in & ~0x3f; }
@@ -236,6 +237,7 @@ void Inst::dump(Tick startTick, int *out) {
   // Dump operations.
   out[IN_OP]  = op + 1;
   out[IN_ST]  = inSQ();
+  out[IN_LD]  = isLoad();
   out[IN_MICRO]  = isMicroOp;
   out[IN_COND_CTRL]  = isCondCtrl;
   out[IN_UNCOND_CTRL]  = isUncondCtrl;
@@ -255,9 +257,11 @@ void Inst::dump(Tick startTick, int *out) {
     out[IN_FETCH_LDIS] = MAX_LDIS;
   else {
     assert(instIdx > mapLIter->second);
-    out[IN_FETCH_LDIS] = instIdx - mapLIter->second;
-    if (out[IN_FETCH_LDIS] > MAX_LDIS)
+    Tick dis = instIdx - mapLIter->second;
+    if (dis > MAX_LDIS)
       out[IN_FETCH_LDIS] = MAX_LDIS;
+    else
+      out[IN_FETCH_LDIS] = dis;
   }
   pcLMap[getLine(pc)] = instIdx;
   // Instruction cache line distance.
@@ -280,18 +284,22 @@ void Inst::dump(Tick startTick, int *out) {
       out[IN_DATA_LLDDIS] = MAX_LDIS;
     else {
       assert(memLdIdx > mapLIter->second);
-      out[IN_DATA_LLDDIS] = memLdIdx - mapLIter->second;
-      if (out[IN_DATA_LLDDIS] > MAX_LDIS)
+      Tick dis = memLdIdx - mapLIter->second;
+      if (dis > MAX_LDIS)
         out[IN_DATA_LLDDIS] = MAX_LDIS;
+      else
+        out[IN_DATA_LLDDIS] = dis;
     }
     mapLIter = dataLineStMap.find(getLine(addr));
     if (mapLIter == dataLineStMap.end())
       out[IN_DATA_LSTDIS] = MAX_LDIS;
     else {
       assert(memStIdx > mapLIter->second);
-      out[IN_DATA_LSTDIS] = memStIdx - mapLIter->second;
-      if (out[IN_DATA_LSTDIS] > MAX_LDIS)
+      Tick dis = memStIdx - mapLIter->second;
+      if (dis > MAX_LDIS)
         out[IN_DATA_LSTDIS] = MAX_LDIS;
+      else
+        out[IN_DATA_LSTDIS] = dis;
     }
     if (isLoad())
       dataLineLdMap[getLine(addr)] = memLdIdx;
@@ -300,6 +308,7 @@ void Inst::dump(Tick startTick, int *out) {
       dataLineStMap[getLine(addr)] = memStIdx;
     }
     // Data address distance.
+    // FIXME: separate load and store?
     mapIter = dataMap.find(addr);
     if (mapIter == dataMap.end())
       out[IN_DATA_SDIS] = MAX_DIS;

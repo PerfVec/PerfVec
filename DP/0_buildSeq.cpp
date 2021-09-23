@@ -34,8 +34,8 @@ int maxOut = 0;
 #include "inst_impl.h"
 
 int main(int argc, char *argv[]) {
-  assert(TRAIN_INST_LEN == 61 && IN_REG_SRC_BEGIN == 33 &&
-         IN_REG_DST_BEGIN == 49 && IN_OP == 12 && IN_ST == 13);
+  assert(TRAIN_INST_LEN == 62 && IN_REG_SRC_BEGIN == 34 &&
+         IN_REG_DST_BEGIN == 50 && IN_OP == 12 && IN_ST == 13);
   if (argc != 2) {
     cerr << "Usage: ./buildSeq <trace>" << endl;
     return 0;
@@ -94,7 +94,6 @@ int main(int argc, char *argv[]) {
     else if (res == READ_INST) {
       if (curInstNum < SEQ_LEN) {
         inst.dump(curTick, &seq[curInstNum * TRAIN_INST_LEN]);
-        curInstNum++;
         num++;
         if (num % 100000 == 0)
           cerr << ".";
@@ -105,13 +104,14 @@ int main(int argc, char *argv[]) {
         inst.dump(curTick, &buf[0]);
         discardNum++;
       }
+      curInstNum++;
       instIdx++;
       if (inst.isLoad())
         memLdIdx++;
       else if (inst.isStore())
         memStIdx++;
     } else {
-      assert(curInstNum == SEQ_LEN);
+      assert(curInstNum >= SEQ_LEN);
       seqNum++;
       // Fetch starts after 3 cycles.
       curTick = res + 3;
