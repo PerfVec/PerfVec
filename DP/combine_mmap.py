@@ -29,7 +29,7 @@ output = os.path.join(data_set_dir, "all.mmap")
 shp = (total_size, seq_length, inst_length)
 chunk_num = total_size // chunk_size
 print("Make memmap dataset", output, " shape is", shp, chunk_num, 'chunks',flush=True)
-all_data = np.memmap(output, dtype=np.uint16, mode='w+', shape=shp)
+all_data = np.memmap(output, dtype=data_item_format, mode='w+', shape=shp)
 
 chunks = []
 bounds = [0]

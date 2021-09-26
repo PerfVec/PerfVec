@@ -1,17 +1,19 @@
 import numpy as np
 
 # Data set configuration.
-data_set_dir = 'Data/'
+#data_set_dir = 'Data/'
+data_set_dir = 'Data1/'
 datasets = [
   (data_set_dir + '507.cactuBSSN_r.seq.mmap', 1011073),
   (data_set_dir + '508.namd_r.seq.mmap', 1079195),
   (data_set_dir + '500.perlbench_r.seq.mmap', 1158521),
   (data_set_dir + '502.gcc_r.seq.mmap', 15836),
-  (data_set_dir + '999.specrand_ir.seq.mmap', 57694),
+  #(data_set_dir + '999.specrand_ir.seq.mmap', 57694),
   (data_set_dir + 'all.mmap', 3264625)
 ]
 
-data_item_format = np.uint16
+#data_item_format = np.uint16
+data_item_format = np.uint32
 # total batch number is 797.03
 testbatchnum = 750
 validbatchnum = 700
@@ -24,7 +26,10 @@ valid_start = validbatchnum * ori_batch_size
 valid_end = (validbatchnum + validbatchsize) * ori_batch_size
 
 seq_length = 1024
-input_length = 47
-tgt_length = 3
-input_start = 5
+#input_length = 47
+#tgt_length = 3
+#input_start = 5
+input_length = 50
+tgt_length = 12
+input_start = 12
 inst_length = input_start + input_length

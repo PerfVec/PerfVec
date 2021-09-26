@@ -2,7 +2,7 @@ import sys
 import os
 import argparse
 import numpy as np
-from ML.cfg import seq_length, inst_length
+from ML.cfg import seq_length, inst_length, data_item_format
 
 parser = argparse.ArgumentParser(description="Transform from text to memmap dataset")
 parser.add_argument('--start', type=int, default=0)
@@ -26,7 +26,7 @@ nfilled = 0
 nseqs = 0
 ninsts = 0
 bad_lines = 0
-all_feats = np.memmap(output, dtype=np.uint16, mode='w+', shape=shp)
+all_feats = np.memmap(output, dtype=data_item_format, mode='w+', shape=shp)
 
 for i in range(len(args.fname)):
   fname = args.fname[i]
