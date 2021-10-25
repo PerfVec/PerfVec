@@ -7,7 +7,7 @@ from cfg import seq_length, input_length, tgt_length
 
 
 class SeqLSTM(nn.Module):
-  def __init__(self, nhidden, nlayers, nembed=0, gru=False, norm=False):
+  def __init__(self, nhidden, nlayers, nembed=0, gru=False, bi=False, norm=False):
     super(SeqLSTM, self).__init__()
 
     if nembed != 0:
@@ -17,22 +17,25 @@ class SeqLSTM(nn.Module):
     else:
       self.embed = False
       nin = input_length
+    self.bi = bi
     self.norm = norm
     if norm:
       #self.inst_norm = nn.LayerNorm(seq_length)
       self.inst_norm = nn.LayerNorm([seq_length, nin])
     if gru:
-      self.lstm = nn.GRU(nin, nhidden, nlayers, batch_first=True)
+      self.lstm = nn.GRU(nin, nhidden, nlayers, batch_first=True, bidirectional=bi)
     else:
-      self.lstm = nn.LSTM(nin, nhidden, nlayers, batch_first=True)
+      self.lstm = nn.LSTM(nin, nhidden, nlayers, batch_first=True, bidirectional=bi)
+    if bi:
+      nhidden *= 2
     self.linear = nn.Linear(nhidden, tgt_length)
 
-  def init_hidden(self):
-    # type: () -> Tuple[nn.Parameter, nn.Parameter]
-    return (
-      nn.Parameter(torch.zeros(1, 1, nhidden, requires_grad=True)),
-      nn.Parameter(torch.zeros(1, 1, nhidden, requires_grad=True)),
-    )
+  #def init_hidden(self):
+  #  # type: () -> Tuple[nn.Parameter, nn.Parameter]
+  #  return (
+  #    nn.Parameter(torch.zeros(1, 1, nhidden, requires_grad=True)),
+  #    nn.Parameter(torch.zeros(1, 1, nhidden, requires_grad=True)),
+  #  )
 
   def forward(self, x):
     if self.embed:
@@ -107,7 +110,8 @@ class TransformerModel(nn.Module):
     def forward(self, src):
         src = src.transpose(0, 1)
         if self.embed:
-          src = F.relu(self.inst_embed(src))
+          #src = F.relu(self.inst_embed(src))
+          src = self.inst_embed(src)
         src = self.pos_encoder(src)
         #output = self.encoder(src, self.src_mask)
         output = self.encoder(src)

@@ -141,8 +141,10 @@ def main_rank(rank, args):
     #dataset2 = MemMappedDataset(data_file_name, total_size, valid_start, valid_end)
     #dataset1 = CombinedMMDataset(4, 0, args.train_size)
     #dataset2 = CombinedMMDataset(4, valid_start, valid_end)
-    dataset1 = MemMappedDataset(datasets[5][0], datasets[5][1], 0, args.train_size)
-    dataset2 = MemMappedDataset(datasets[5][0], datasets[5][1], valid_start, valid_end)
+    #dataset1 = MemMappedDataset(datasets[5][0], datasets[5][1], 0, args.train_size)
+    #dataset2 = MemMappedDataset(datasets[5][0], datasets[5][1], valid_start, valid_end)
+    dataset1 = NormMemMappedDataset(datasets[5][0], datasets[5][1], 0, args.train_size)
+    dataset2 = NormMemMappedDataset(datasets[5][0], datasets[5][1], valid_start, valid_end)
     #print(dataset1[0][0].size())
     #print(dataset1[0])
     #print(dataset1[12686])
@@ -185,10 +187,14 @@ def main_rank(rank, args):
             model = nn.DataParallel(model).to(device)
         else:
             model.to(device)
+        opt_args = {}
         if args.lr != 0:
-            optimizer = optim.Adam(model.parameters(), lr=args.lr)
-        else:
-            optimizer = optim.Adam(model.parameters())
+            lr_arg = {'lr': args.lr}
+            opt_args.update(lr_arg)
+        if args.wd != 0:
+            wd_arg = {'weight_decay': args.wd}
+            opt_args.update(wd_arg)
+        optimizer = optim.Adam(model.parameters(), **opt_args)
         models.append(ModelSet(i, name, model, optimizer))
         i += 1
         #ori_lr = optimizer.defaults['lr']
@@ -237,6 +243,8 @@ def main():
                         help='number of epochs to train (default: 100)')
     parser.add_argument('--lr', type=float, default=0, metavar='N',
                         help='initial learning rate')
+    parser.add_argument('--wd', type=float, default=0, metavar='N',
+                        help='weight decay rate')
     parser.add_argument('--clip', type=float, default=0, metavar='N',
                         help='gradient normalization value (default: 0)')
     parser.add_argument('--no-cuda', action='store_true', default=False,

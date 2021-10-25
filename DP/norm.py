@@ -25,7 +25,7 @@ for i in range(input_length):
   print(all_mean[i], all_std[i])
 
 print("Global mean is %s" % str(all_mean))
-print("Global std is %s" % (str(all_std), np.linalg.norm(all_std), np.sum(all_std)))
+print("Global std is %s" % str(all_std))
 print("Took %f to compute" % (time.time() - t1))
 
 np.savez("%s/stats" % data_set_dir, mean=all_mean, std=all_std)

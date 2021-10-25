@@ -1,3 +1,4 @@
+import os
 import torch
 import numpy as np
 from torch.utils.data import Dataset
@@ -23,10 +24,41 @@ class MemMappedDataset(Dataset):
 
         idx += self.start
         x = np.copy(self.arr[idx, :, input_start:inst_length])
-        #y = np.copy(self.arr[idx, :, 0:input_start])
-        y = np.concatenate((self.arr[idx, :, 0:1], self.arr[idx, :, 2:3], self.arr[idx, :, 4:5]), axis=1)
-        y_diff = y[1:seq_length, :] - y[0:seq_length-1, :]
-        y[1:seq_length, :] = y_diff
+        y = np.copy(self.arr[idx, :, 0:input_start])
+        #y = np.concatenate((self.arr[idx, :, 0:1], self.arr[idx, :, 2:3], self.arr[idx, :, 4:5]), axis=1)
+        #y_diff = y[1:seq_length, :] - y[0:seq_length-1, :]
+        #y[1:seq_length, :] = y_diff
+        x = torch.from_numpy(x.astype('f'))
+        y = torch.from_numpy(y.astype('f'))
+        return x, y
+
+
+class NormMemMappedDataset(Dataset):
+
+    def __init__(self, file_name, seqs, start, end):
+        self.arr = np.memmap(file_name, dtype=data_item_format, mode='r',
+                             shape=(seqs, seq_length, inst_length))
+        if end <= start or end > seqs:
+            raise AttributeError("End is illegal.")
+        self.start = start
+        self.size = end - start
+        stats = np.load(os.path.dirname(file_name) + "/stats.npz")
+        self.mean = stats['mean']
+        std = stats['std']
+        std[std == 0.0] = 1.0
+        self.factor = std
+
+    def __len__(self):
+        return self.size
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        idx += self.start
+        x = np.copy(self.arr[idx, :, input_start:inst_length])
+        x = (x - self.mean) / self.factor
+        y = np.copy(self.arr[idx, :, 0:input_start])
         x = torch.from_numpy(x.astype('f'))
         y = torch.from_numpy(y.astype('f'))
         return x, y
