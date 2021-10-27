@@ -7,7 +7,8 @@ from ML.cfg import data_item_format, seq_length, inst_length, data_set_dir, data
 
 parser = argparse.ArgumentParser(description="Combine memmap datasets")
 parser.add_argument('-n', '--file-num', type=int, default=0)
-parser.add_argument('-c', '--chunk-size', type=int, default=10000)
+parser.add_argument('-c', '--chunk-size', type=int, default=16384)
+parser.add_argument('--norm', action='store_true', default=False)
 args = parser.parse_args()
 file_num = args.file_num
 chunk_size = args.chunk_size
@@ -37,9 +38,12 @@ cum_size = 0
 for i in range(file_num):
   if i != file_num - 1:
     frac = round(datasets[i][1] / total_size * chunk_size)
+    if frac > datasets[i][1] / chunk_num:
+      frac = datasets[i][1] / chunk_num
   else:
     frac = chunk_size - cum_size
   print(datasets[i][0], 'has %d entries in a chunk of %d.' % (frac, chunk_size))
+  assert frac * chunk_num <= datasets[i][1]
   cum_size += frac
   chunks.append(frac)
   bounds.append(cum_size)
@@ -57,6 +61,15 @@ for i in range(file_num):
   all_data[last_start:last_start + last_size] = mm_sets[i][chunk_num*chunks[i]:datasets[i][1]]
   last_start += last_size
 assert last_start == total_size
+
+if args.norm:
+  print('Normalize data.')
+  stats = np.load(data_set_dir + "stats.npz")
+  mean = stats['mean']
+  std = stats['std']
+  std[std == 0.0] = 1.0
+  all_data[:, :, input_start:inst_length] -= mean
+  all_data[:, :, input_start:inst_length] /= std
 
 all_data.flush()
 print('Done.')
