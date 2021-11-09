@@ -12,10 +12,10 @@ import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim.lr_scheduler import StepLR
 
-from custom_data import *
-from utils import profile_model, generate_model_name
-from models import *
-from cfg import *
+from ML.custom_data import *
+from ML.utils import profile_model, generate_model_name
+from ML.models import *
+from CFG import *
 
 
 loss_fn = nn.MSELoss()
@@ -141,10 +141,10 @@ def main_rank(rank, args):
     #dataset2 = MemMappedDataset(data_file_name, total_size, valid_start, valid_end)
     #dataset1 = CombinedMMDataset(4, 0, args.train_size)
     #dataset2 = CombinedMMDataset(4, valid_start, valid_end)
-    #dataset1 = MemMappedDataset(datasets[5][0], datasets[5][1], 0, args.train_size)
-    #dataset2 = MemMappedDataset(datasets[5][0], datasets[5][1], valid_start, valid_end)
-    dataset1 = NormMemMappedDataset(datasets[5][0], datasets[5][1], 0, args.train_size)
-    dataset2 = NormMemMappedDataset(datasets[5][0], datasets[5][1], valid_start, valid_end)
+    dataset1 = MemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], 0, args.train_size)
+    dataset2 = MemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], valid_start, valid_end)
+    #dataset1 = NormMemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], 0, args.train_size)
+    #dataset2 = NormMemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], valid_start, valid_end)
     #print(dataset1[0][0].size())
     #print(dataset1[0])
     #print(dataset1[12686])
@@ -157,19 +157,22 @@ def main_rank(rank, args):
         else:
             num_workers = 2
         cuda_kwargs = {'num_workers': num_workers,
-                       'pin_memory': True,
-                       'shuffle': False}
+                       'pin_memory': True}
         kwargs.update(cuda_kwargs)
     if args.distributed:
         #train_sampler = torch.utils.data.distributed.DistributedSampler(
         #    dataset1, num_replicas=args.world_size, rank=global_rank, shuffle=False)
-        train_sampler = torch.utils.data.distributed.DistributedSampler(dataset1, shuffle=False)
-        train_loader = torch.utils.data.DataLoader(dataset1, sampler=train_sampler, **kwargs)
-        test_sampler = torch.utils.data.distributed.DistributedSampler(dataset2, shuffle=False)
-        test_loader = torch.utils.data.DataLoader(dataset2, sampler=test_sampler, **kwargs)
+        shuffle_kwargs = {'shuffle': True}
+        train_sampler = torch.utils.data.distributed.DistributedSampler(dataset1, **shuffle_kwargs)
+        train_loader = torch.utils.data.DataLoader(dataset1, sampler=train_sampler, **kwargs, **shuffle_kwargs)
+        shuffle_kwargs = {'shuffle': False}
+        test_sampler = torch.utils.data.distributed.DistributedSampler(dataset2, **shuffle_kwargs)
+        test_loader = torch.utils.data.DataLoader(dataset2, sampler=test_sampler, **kwargs, **shuffle_kwargs)
     else:
-        train_loader = torch.utils.data.DataLoader(dataset1, **kwargs)
-        test_loader = torch.utils.data.DataLoader(dataset2, **kwargs)
+        shuffle_kwargs = {'shuffle': True}
+        train_loader = torch.utils.data.DataLoader(dataset1, **kwargs, **shuffle_kwargs)
+        shuffle_kwargs = {'shuffle': False}
+        test_loader = torch.utils.data.DataLoader(dataset2, **kwargs, **shuffle_kwargs)
 
     models = []
     i = 0
