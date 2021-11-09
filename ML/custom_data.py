@@ -2,7 +2,7 @@ import os
 import torch
 import numpy as np
 from torch.utils.data import Dataset
-from cfg import data_item_format, seq_length, inst_length, input_start, datasets
+from CFG import data_item_format, seq_length, inst_length, input_start, datasets
 
 
 class MemMappedDataset(Dataset):

@@ -7,10 +7,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from custom_data import *
-from utils import profile_model
-from models import *
-from cfg import *
+from .custom_data import *
+from .utils import profile_model
+from .models import *
+from CFG import *
 
 
 loss_fn = nn.MSELoss()
@@ -114,8 +114,8 @@ def main():
 
     #dataset = MemMappedDataset(data_file_name, total_size, test_start, test_end)
     #dataset = CombinedMMDataset(4, test_start, test_end)
-    #dataset = MemMappedDataset(datasets[5][0], datasets[5][1], test_start, test_end)
-    dataset = NormMemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
+    dataset = MemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
+    #dataset = NormMemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
     kwargs = {'batch_size': args.batch_size,
               'shuffle': False}
     if use_cuda:

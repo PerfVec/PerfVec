@@ -2,8 +2,8 @@ import numpy as np
 import torch
 from datetime import datetime
 from ptflops import get_model_complexity_info
-from cfg import seq_length, input_length
-from models import *
+from CFG import seq_length, input_length
+from .models import *
 
 
 def print_arr(arr):

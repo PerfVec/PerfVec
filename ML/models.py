@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
-from cfg import seq_length, input_length, tgt_length
+from CFG import seq_length, input_length, tgt_length
 
 
 class SeqLSTM(nn.Module):
