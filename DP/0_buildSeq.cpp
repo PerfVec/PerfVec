@@ -3,11 +3,14 @@
 #include <cstring>
 #include <cassert>
 #include <string>
+#include <vector>
 #include <unordered_map>
 
 using namespace std;
 
 #include "inst.h"
+
+//#define UNIQUE_RD
 
 // Current sequence status.
 int curInstNum;
@@ -18,11 +21,17 @@ Tick lastFetchTick;
 Tick lastCommitTick;
 Tick lastSqOutTick;
 unordered_map<Addr, int> pcMap;
-unordered_map<Addr, Tick> pcLMap;
 unordered_map<Addr, int> dataMap;
 unordered_map<Addr, int> dataLineMap;
+#ifdef UNIQUE_RD
+vector<Addr> pcArr;
+vector<Addr> dataLdArr;
+vector<Addr> dataStArr;
+#else
+unordered_map<Addr, Tick> pcLMap;
 unordered_map<Addr, Tick> dataLineLdMap;
 unordered_map<Addr, Tick> dataLineStMap;
+#endif
 
 #define TICK_STEP 500
 Tick minCompleteLat = 100;
@@ -66,8 +75,8 @@ int main(int argc, char *argv[]) {
   int *seq = new int[SEQ_LEN * TRAIN_INST_LEN];
   int buf[TRAIN_INST_LEN];
 
-  // First fetch starts at the 2nd cycle.
-  Tick curTick = 2;
+  // First fetch starts at cycle 0.
+  Tick curTick = 0;
   bool firstInst = true;
   Tick num = 0;
   Tick discardNum = 0;
@@ -82,17 +91,27 @@ int main(int argc, char *argv[]) {
   lastCommitTick = 0;
   lastSqOutTick = 0;
   pcMap.clear();
-  pcLMap.clear();
   dataMap.clear();
   dataLineMap.clear();
+#ifdef UNIQUE_RD
+  pcArr.clear();
+  dataLdArr.clear();
+  dataStArr.clear();
+#else
+  pcLMap.clear();
   dataLineLdMap.clear();
   dataLineStMap.clear();
+#endif
   while (!trace.eof()) {
     Tick res = inst.read(trace, sqtrace);
     if (res == FILE_END)
       break;
     else if (res == READ_INST) {
       if (curInstNum < SEQ_LEN) {
+        if (firstInst) {
+          inst.fetchDepth = 2;
+          firstInst = false;
+        }
         inst.dump(curTick, &seq[curInstNum * TRAIN_INST_LEN]);
         num++;
         if (num % 100000 == 0)

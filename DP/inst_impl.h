@@ -170,6 +170,37 @@ void printOP(Inst *i) {
           i->isMemBar, i->isMisPredict);
 }
 
+template <class T>
+int getReuseDistance(Addr addr, T idx, unordered_map<Addr, T> &map, int max) {
+  int res;
+  auto mapLIter = map.find(addr);
+  if (mapLIter == map.end())
+    res = max;
+  else {
+    assert(idx > mapLIter->second);
+    Tick dis = idx - mapLIter->second;
+    if (dis > max)
+      res = max;
+    else
+      res = dis;
+  }
+  return res;
+}
+
+int getUniqueRD(Addr addr, vector<Addr> &arr, int max) {
+  unordered_map<Addr, bool> map;
+  for (auto i = arr.end(); i != arr.begin(); i--) {
+    if (addr == *i)
+      return map.size() + 1;
+    else {
+      map[*i] = true;
+      if (map.size() >= max)
+        return max;
+    }
+  }
+  return max;
+}
+
 void Inst::dump(Tick startTick, int *out) {
   // Calculate target latencies.
   assert(inTick >= startTick);
@@ -252,84 +283,50 @@ void Inst::dump(Tick startTick, int *out) {
   out[IN_BRANCHING] = isBranching;
   out[IN_MIS_PRED] = isMisPredict;
   // Instruction cache distance in the long history.
-  auto mapLIter = pcLMap.find(getLine(pc));
-  if (mapLIter == pcLMap.end())
-    out[IN_FETCH_LDIS] = MAX_LDIS;
-  else {
-    assert(instIdx > mapLIter->second);
-    Tick dis = instIdx - mapLIter->second;
-    if (dis > MAX_LDIS)
-      out[IN_FETCH_LDIS] = MAX_LDIS;
-    else
-      out[IN_FETCH_LDIS] = dis;
-  }
+#ifdef UNIQUE_RD
+  out[IN_FETCH_LDIS] = getUniqueRD(getLine(pc), pcArr, MAX_LDIS);
+  pcArr.push_back(getLine(pc));
+#else
+  out[IN_FETCH_LDIS] = getReuseDistance(getLine(pc), instIdx, pcLMap, MAX_LDIS);
   pcLMap[getLine(pc)] = instIdx;
+#endif
   // Instruction cache line distance.
-  auto mapIter = pcMap.find(getLine(pc));
-  if (mapIter == pcMap.end())
-    out[IN_FETCH_SDIS] = MAX_DIS;
-  else {
-    out[IN_FETCH_SDIS] = curInstNum - mapIter->second;
-    if (out[IN_FETCH_SDIS] > MAX_DIS)
-      out[IN_FETCH_SDIS] = MAX_DIS;
-    assert(out[IN_FETCH_SDIS] > 0);
-  }
+  out[IN_FETCH_SDIS] =
+      getReuseDistance(getLine(pc), curInstNum, pcMap, MAX_DIS);
   pcMap[getLine(pc)] = curInstNum;
 
   out[IN_DATA] = isAddr;
   if (isAddr) {
     // Data cache distance in the long history.
-    mapLIter = dataLineLdMap.find(getLine(addr));
-    if (mapLIter == dataLineLdMap.end())
-      out[IN_DATA_LLDDIS] = MAX_LDIS;
+#ifdef UNIQUE_RD
+    out[IN_DATA_LLDDIS] = getUniqueRD(getLine(addr), dataLdArr, MAX_LDIS);
+    out[IN_DATA_LSTDIS] = getUniqueRD(getLine(addr), dataStArr, MAX_LDIS);
+    if (isLoad())
+      dataLdArr.push_back(getLine(addr));
     else {
-      assert(memLdIdx > mapLIter->second);
-      Tick dis = memLdIdx - mapLIter->second;
-      if (dis > MAX_LDIS)
-        out[IN_DATA_LLDDIS] = MAX_LDIS;
-      else
-        out[IN_DATA_LLDDIS] = dis;
+      assert(isStore());
+      dataStArr.push_back(getLine(addr));
     }
-    mapLIter = dataLineStMap.find(getLine(addr));
-    if (mapLIter == dataLineStMap.end())
-      out[IN_DATA_LSTDIS] = MAX_LDIS;
-    else {
-      assert(memStIdx > mapLIter->second);
-      Tick dis = memStIdx - mapLIter->second;
-      if (dis > MAX_LDIS)
-        out[IN_DATA_LSTDIS] = MAX_LDIS;
-      else
-        out[IN_DATA_LSTDIS] = dis;
-    }
+#else
+    out[IN_DATA_LLDDIS] =
+        getReuseDistance(getLine(addr), memLdIdx, dataLineLdMap, MAX_LDIS);
+    out[IN_DATA_LSTDIS] =
+        getReuseDistance(getLine(addr), memStIdx, dataLineStMap, MAX_LDIS);
     if (isLoad())
       dataLineLdMap[getLine(addr)] = memLdIdx;
     else {
       assert(isStore());
       dataLineStMap[getLine(addr)] = memStIdx;
     }
+#endif
     // Data address distance.
     // FIXME: separate load and store?
-    mapIter = dataMap.find(addr);
-    if (mapIter == dataMap.end())
-      out[IN_DATA_SDIS] = MAX_DIS;
-    else {
-      out[IN_DATA_SDIS] = curInstNum - mapIter->second;
-      if (out[IN_DATA_SDIS] > MAX_DIS)
-        out[IN_DATA_SDIS] = MAX_DIS;
-      assert(out[IN_DATA_SDIS] > 0);
-    }
+    out[IN_DATA_SDIS] = getReuseDistance(addr, curInstNum, dataMap, MAX_DIS);
     // FIXME: number of memory accesses instead?
     dataMap[addr] = curInstNum;
     // Data address cache line distance.
-    mapIter = dataLineMap.find(getLine(addr));
-    if (mapIter == dataLineMap.end())
-      out[IN_DATA_SDIS_LINE] = MAX_DIS;
-    else {
-      out[IN_DATA_SDIS_LINE] = curInstNum - mapIter->second;
-      if (out[IN_DATA_SDIS_LINE] > MAX_DIS)
-        out[IN_DATA_SDIS_LINE] = MAX_DIS;
-      assert(out[IN_DATA_SDIS_LINE] > 0);
-    }
+    out[IN_DATA_SDIS_LINE] =
+        getReuseDistance(getLine(addr), curInstNum, dataLineMap, MAX_DIS);
     dataLineMap[getLine(addr)] = curInstNum;
   } else {
     out[IN_DATA_LLDDIS] = 0;
