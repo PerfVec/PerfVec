@@ -164,10 +164,10 @@ def main_rank(rank, args):
         #    dataset1, num_replicas=args.world_size, rank=global_rank, shuffle=False)
         shuffle_kwargs = {'shuffle': True}
         train_sampler = torch.utils.data.distributed.DistributedSampler(dataset1, **shuffle_kwargs)
-        train_loader = torch.utils.data.DataLoader(dataset1, sampler=train_sampler, **kwargs, **shuffle_kwargs)
+        train_loader = torch.utils.data.DataLoader(dataset1, sampler=train_sampler, **kwargs)
         shuffle_kwargs = {'shuffle': False}
         test_sampler = torch.utils.data.distributed.DistributedSampler(dataset2, **shuffle_kwargs)
-        test_loader = torch.utils.data.DataLoader(dataset2, sampler=test_sampler, **kwargs, **shuffle_kwargs)
+        test_loader = torch.utils.data.DataLoader(dataset2, sampler=test_sampler, **kwargs)
     else:
         shuffle_kwargs = {'shuffle': True}
         train_loader = torch.utils.data.DataLoader(dataset1, **kwargs, **shuffle_kwargs)
