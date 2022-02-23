@@ -3,7 +3,7 @@ import time
 import os
 import numpy as np
 import argparse
-from CFG import data_item_format, seq_length, inst_length, input_start, input_length, data_set_dir, data_set_idx, datasets
+from CFG import data_item_format, inst_length, input_start, input_length, data_set_dir, data_set_idx, datasets
 
 parser = argparse.ArgumentParser(description="Compute normalization factors")
 args = parser.parse_args()
@@ -14,15 +14,18 @@ all_sum = np.zeros(input_length)
 all_mean = np.zeros(input_length)
 all_std = np.zeros(input_length)
 
-fname = datasets[data_set_idx][0]
-seqs = datasets[data_set_idx][1]
-print("Open", fname)
-data = np.memmap(fname, dtype=data_item_format, mode='r',
-                 shape=(seqs, seq_length, inst_length))
 for i in range(input_length):
-  all_mean[i] = np.mean(data[:, :, input_start + i])
-  all_std[i] = np.std(data[:, :, input_start + i])
-  print(all_mean[i], all_std[i])
+  cur_data = np.empty(0)
+  for j in range(data_set_idx):
+    fname = datasets[j][0]
+    insts = datasets[j][1]
+    data = np.memmap(fname, dtype=data_item_format, mode='r',
+                     shape=(insts, inst_length))
+    cur_data = np.array([cur_data, data[:, input_start + i]])
+  print("Calculate", i, flush=True)
+  all_mean[i] = np.mean(cur_data)
+  all_std[i] = np.std(cur_data)
+  print(all_mean[i], all_std[i], flush=True)
 
 print("Global mean is %s" % str(all_mean))
 print("Global std is %s" % str(all_std))

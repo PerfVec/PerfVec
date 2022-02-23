@@ -60,6 +60,10 @@ struct Inst {
   Tick inTick;
   Tick completeTick;
   Tick outTick;
+  Tick decodeTick;
+  Tick renameTick;
+  Tick dispatchTick;
+  Tick issueTick;
   Tick storeTick;
   Tick sqOutTick;
 
