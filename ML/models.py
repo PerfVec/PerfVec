@@ -48,6 +48,15 @@ class SeqLSTM(nn.Module):
     return x
 
 
+class InsLSTM(SeqLSTM):
+  def __init__(self, nhidden, nlayers, nembed=0, gru=False, bi=False, norm=False):
+    super().__init__(nhidden, nlayers, nembed, gru, bi, norm)
+
+  def forward(self, x):
+    x = super().forward(x)
+    return x[:, -1, :]
+
+
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, dropout=0.1, max_len=5000):
         super().__init__()

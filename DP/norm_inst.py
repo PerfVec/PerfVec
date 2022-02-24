@@ -21,8 +21,9 @@ for i in range(input_length):
     insts = datasets[j][1]
     data = np.memmap(fname, dtype=data_item_format, mode='r',
                      shape=(insts, inst_length))
-    cur_data = np.array([cur_data, data[:, input_start + i]])
-  print("Calculate", i, flush=True)
+    #cur_data = np.array([cur_data, data[:, input_start + i]])
+    cur_data = np.concatenate((cur_data, data[:, input_start + i]))
+  print("Calculate", i, cur_data.shape, flush=True)
   all_mean[i] = np.mean(cur_data)
   all_std[i] = np.std(cur_data)
   print(all_mean[i], all_std[i], flush=True)
