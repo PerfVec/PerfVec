@@ -81,7 +81,9 @@ struct Inst {
   bool isLoad() { return (op == 47); }
   bool isStore() { return (op == 48); }
 
-  void dump(Tick startTick, int *out);
+  void dump(Tick startTick, double *out);
+  void dumpTargets(Tick startTick, double *out);
+  void dumpFeatures(Tick startTick, double *out);
 };
 
 #endif

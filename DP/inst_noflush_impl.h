@@ -1,10 +1,42 @@
 #ifndef __INST_IMPL_Q_H__
 #define __INST_IMPL_Q_H__
 
+#include <cmath>
+#include "reuse-dist.h"
+
+//#define UNIQUE_RD
+#define TREE_RD
+
+// Current sequence status.
+Tick instIdx;
+Tick memLdIdx;
+Tick memStIdx;
+Tick lastFetchTick;
+Tick lastCommitTick;
+Tick lastSqOutTick;
+Tick lastDecodeTick;
+Tick lastRenameTick;
+Tick lastDispatchTick;
+unordered_map<Addr, Tick> dataMap;
+#ifdef UNIQUE_RD
+vector<Addr> pcArr;
+vector<Addr> dataLdArr;
+vector<Addr> dataStArr;
+#elif defined(TREE_RD)
+ReuseDistance *PCRD;
+ReuseDistance *LdRD;
+ReuseDistance *StRD;
+#else
+unordered_map<Addr, Tick> pcLMap;
+unordered_map<Addr, Tick> dataLineLdMap;
+unordered_map<Addr, Tick> dataLineStMap;
+#endif
+
+#define TICK_STEP 500
 #define MAX_DIS 1000
 #define MAX_LDIS 100000000
 
-enum trainDataIdx {
+enum targetIdx {
   TGT_FETCH = 0,
   TGT_COMMIT,
   TGT_ST_COMMIT,
@@ -21,7 +53,11 @@ enum trainDataIdx {
   TGT_MEM_I,
   TGT_MEM_LD,
   TGT_MEM_ST,
-  IN_BEGIN, // 15
+  TGT_LEN // 15
+};
+
+enum featureIdx {
+  IN_BEGIN = 0,
   IN_OP = IN_BEGIN,
   IN_ST,
   IN_LD,
@@ -36,17 +72,19 @@ enum trainDataIdx {
   IN_MEMBAR,
   IN_NON_SPEC,
   IN_BRANCHING,
-  IN_MIS_PRED,
+  //IN_MIS_PRED,
+  IN_GBE_PRE,
+  IN_GBE_NOW,
   IN_FETCH_LDIS,
   IN_DATA,
   IN_DATA_LLDDIS,
   IN_DATA_LSTDIS,
   IN_DATA_SDIS,
-  IN_REG_SRC_BEGIN, // 35
+  IN_REG_SRC_BEGIN, // 21
   IN_REG_SRC_END = IN_REG_SRC_BEGIN + 2*SRCREGNUM - 1,
-  IN_REG_DST_BEGIN, // 51
+  IN_REG_DST_BEGIN, // 37
   IN_REG_DST_END = IN_REG_DST_BEGIN + 2*DSTREGNUM - 1,
-  TRAIN_INST_LEN // 63
+  IN_LEN // 49
 };
 
 inline Addr getLine(Addr in) { return in & ~0x3f; }
@@ -211,7 +249,51 @@ int getUniqueRD(Addr addr, vector<Addr> &arr, int max) {
   return max;
 }
 
-void Inst::dump(Tick startTick, int *out) {
+class BranchEntropy {
+public:
+  double globalPre;
+  double globalNow;
+
+  BranchEntropy() {
+    globalPre = 0.0;
+    globalNow = 0.0;
+  }
+};
+
+unordered_map<Addr, vector<bool> *> BranchHistories;
+
+#define BRANCH_HISTORY_LENGTH 8
+
+BranchEntropy getBranchEntropy(Addr pc, bool taken) {
+  BranchEntropy BE;
+  auto hisIter = BranchHistories.find(pc);
+  if (hisIter == BranchHistories.end()) {
+    BranchHistories[pc] = new vector<bool>();
+    hisIter = BranchHistories.find(pc);
+  }
+  hisIter->second->push_back(taken);
+  int hisSize = hisIter->second->size();
+  // Compute the global entropy.
+  for (int i = 0; i < BRANCH_HISTORY_LENGTH+1; i++) {
+    double hisTaken;
+    if (hisSize - 1 - i >= 0)
+      hisTaken = hisIter->second->at(hisSize - 1 - i);
+    else
+      hisTaken = 0.5;
+    if (i < BRANCH_HISTORY_LENGTH)
+      BE.globalNow += hisTaken;
+    if (i > 0)
+      BE.globalPre += hisTaken;
+  }
+  double p = BE.globalNow / BRANCH_HISTORY_LENGTH;
+  BE.globalNow = -p * log(p) - (1-p) * log(1-p);
+  p = BE.globalPre / BRANCH_HISTORY_LENGTH;
+  BE.globalPre = -p * log(p) - (1-p) * log(1-p);
+  // FIXME: history aware entropy.
+  return BE;
+}
+
+void Inst::dumpTargets(Tick startTick, double *out) {
   // Calculate target latencies.
   assert(inTick >= startTick);
   Tick fetchLat = inTick - startTick;
@@ -288,7 +370,9 @@ void Inst::dump(Tick startTick, int *out) {
       out[TGT_L1_ST] = 1;
     }
   }
+}
 
+void Inst::dumpFeatures(Tick startTick, double *out) {
   // Dump operations.
   out[IN_OP]  = op + 1;
   out[IN_ST]  = inSQ();
@@ -305,11 +389,21 @@ void Inst::dump(Tick startTick, int *out) {
   out[IN_NON_SPEC] = isNonSpeculative;
 
   out[IN_BRANCHING] = isBranching;
-  out[IN_MIS_PRED] = isMisPredict;
+  //out[IN_MIS_PRED] = isMisPredict;
+  if (isCondCtrl) {
+    BranchEntropy BE = getBranchEntropy(pc, isBranching);
+    out[IN_GBE_PRE] = BE.globalPre;
+    out[IN_GBE_NOW] = BE.globalNow;
+  } else {
+    out[IN_GBE_PRE] = 0.0;
+    out[IN_GBE_NOW] = 0.0;
+  }
   // Instruction cache distance in the long history.
 #ifdef UNIQUE_RD
   out[IN_FETCH_LDIS] = getUniqueRD(getLine(pc), pcArr, MAX_LDIS);
   pcArr.push_back(getLine(pc));
+#elif defined(TREE_RD)
+  out[IN_FETCH_LDIS] = PCRD->process_address(getLine(pc), true);
 #else
   out[IN_FETCH_LDIS] = getReuseDistance(getLine(pc), instIdx, pcLMap, MAX_LDIS);
   pcLMap[getLine(pc)] = instIdx;
@@ -327,6 +421,10 @@ void Inst::dump(Tick startTick, int *out) {
       assert(isStore());
       dataStArr.push_back(getLine(addr));
     }
+#elif defined(TREE_RD)
+    bool LdUpdate = isLoad();
+    out[IN_DATA_LLDDIS] = LdRD->process_address(getLine(addr), LdUpdate);
+    out[IN_DATA_LSTDIS] = StRD->process_address(getLine(addr), !LdUpdate);
 #else
     out[IN_DATA_LLDDIS] =
         getReuseDistance(getLine(addr), memLdIdx, dataLineLdMap, MAX_LDIS);
@@ -369,6 +467,11 @@ void Inst::dump(Tick startTick, int *out) {
     out[IN_REG_DST_BEGIN + 2*i] = 0;
     out[IN_REG_DST_BEGIN + 2*i+1] = 0;
   }
+}
+
+void Inst::dump(Tick startTick, double *out) {
+  dumpTargets(startTick, out);
+  dumpFeatures(startTick, out + TGT_LEN);
 }
 
 #endif
