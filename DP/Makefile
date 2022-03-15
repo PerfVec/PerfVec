@@ -13,3 +13,6 @@ inst:
 in:
 	g++ -O3 -std=c++11 0_buildInstFeature.cpp -o buildInstFeature
 	#g++ -g -O0 -std=c++11 0_buildInstFeature.cpp -o buildInstFeature
+
+out:
+	g++ -O3 -std=c++11 0_buildComOut.cpp -o buildComOut

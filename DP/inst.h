@@ -83,6 +83,7 @@ struct Inst {
 
   void dump(Tick startTick, double *out);
   void dumpTargets(Tick startTick, double *out);
+  void dumpTargets(Tick startTick, double *out, Tick &memLdIdx, Tick &memStIdx, Tick &lastFetchTick, Tick &lastCommitTick, Tick &lastSqOutTick, Tick &lastDecodeTick, Tick &lastRenameTick, Tick &lastDispatchTick);
   void dumpFeatures(Tick startTick, double *out);
 };
 

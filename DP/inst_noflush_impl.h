@@ -53,7 +53,8 @@ enum targetIdx {
   TGT_MEM_I,
   TGT_MEM_LD,
   TGT_MEM_ST,
-  TGT_LEN // 15
+  TGT_MIS_PRED,
+  TGT_LEN // 16
 };
 
 enum featureIdx {
@@ -135,7 +136,7 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace) {
       minCompleteLat = completeTick;
     storeTick /= TICK_STEP;
     sqOutTick /= TICK_STEP;
-    if (storeTick < minStoreLat)
+    if (storeTick != 0 && storeTick < minStoreLat)
       minStoreLat = storeTick;
     decodeTick /= TICK_STEP;
     renameTick /= TICK_STEP;
@@ -302,6 +303,10 @@ BranchEntropy getBranchEntropy(Addr pc, bool taken) {
 }
 
 void Inst::dumpTargets(Tick startTick, double *out) {
+  dumpTargets(startTick, out, memLdIdx, memStIdx, lastFetchTick, lastCommitTick, lastSqOutTick, lastDecodeTick, lastRenameTick, lastDispatchTick);
+}
+
+void Inst::dumpTargets(Tick startTick, double *out, Tick &memLdIdx, Tick &memStIdx, Tick &lastFetchTick, Tick &lastCommitTick, Tick &lastSqOutTick, Tick &lastDecodeTick, Tick &lastRenameTick, Tick &lastDispatchTick) {
   // Calculate target latencies.
   assert(inTick >= startTick);
   Tick fetchLat = inTick - startTick;
@@ -316,9 +321,14 @@ void Inst::dumpTargets(Tick startTick, double *out) {
     out[TGT_ST_COMMIT] = sqOutTick + fetchLat - lastSqOutTick;
     lastSqOutTick = sqOutTick + fetchLat;
   } else {
-    out[TGT_ST_COMMIT] = 0;
+    //out[TGT_ST_COMMIT] = 0;
     //out[TGT_ST_COMMIT] = outTick + fetchLat - lastSqOutTick;
     //lastSqOutTick = outTick + fetchLat;
+    if (lastCommitTick > lastSqOutTick) {
+      out[TGT_ST_COMMIT] = lastCommitTick - lastSqOutTick;
+      lastSqOutTick = lastCommitTick;
+    } else
+      out[TGT_ST_COMMIT] = 0;
   }
   assert(decodeTick + fetchLat >= lastDecodeTick);
   out[TGT_DECODE] = decodeTick + fetchLat - lastDecodeTick;
@@ -378,6 +388,7 @@ void Inst::dumpTargets(Tick startTick, double *out) {
       out[TGT_L1_ST] = 1;
     }
   }
+  out[TGT_MIS_PRED] = isMisPredict;
 }
 
 void Inst::dumpFeatures(Tick startTick, double *out) {

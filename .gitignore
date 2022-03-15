@@ -12,5 +12,4 @@ res
 log
 checkpoints
 stats
-DP/buildSeq
-DP/buildRD
+DP/build*
