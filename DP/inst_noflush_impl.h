@@ -286,9 +286,17 @@ BranchEntropy getBranchEntropy(Addr pc, bool taken) {
       BE.globalPre += hisTaken;
   }
   double p = BE.globalNow / BRANCH_HISTORY_LENGTH;
-  BE.globalNow = -p * log(p) - (1-p) * log(1-p);
+  assert(p >= 0.0 && p <= 1.0);
+  if (p == 0.0 || p == 1.0)
+    BE.globalNow = 0.0;
+  else
+    BE.globalNow = -p * log(p) - (1-p) * log(1-p);
   p = BE.globalPre / BRANCH_HISTORY_LENGTH;
-  BE.globalPre = -p * log(p) - (1-p) * log(1-p);
+  assert(p >= 0.0 && p <= 1.0);
+  if (p == 0.0 || p == 1.0)
+    BE.globalPre = 0.0;
+  else
+    BE.globalPre = -p * log(p) - (1-p) * log(1-p);
   // FIXME: history aware entropy.
   return BE;
 }
