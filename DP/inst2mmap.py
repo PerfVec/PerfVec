@@ -39,7 +39,8 @@ for i in range(len(args.fname)):
         continue
 
       try:
-        vals = [int(val) for val in line.split()]
+        #vals = [int(val) for val in line.split()]
+        vals = [float(val) for val in line.split()]
         assert len(vals) == inst_length
       except:
         print("Bad line:", len(vals), vals, flush=True)
