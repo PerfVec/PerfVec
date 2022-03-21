@@ -1,16 +1,18 @@
 import numpy as np
 
 # Data set configuration.
-data_set_dir = 'Data2/'
+data_set_dir = 'Data3/'
 data_set_idx = 4
 datasets = [
-  (data_set_dir + '507.cactuBSSN_r.inst.mmap.norm', 1035389426),
-  (data_set_dir + '508.namd_r.inst.mmap.norm', 1105244743),
-  (data_set_dir + '500.perlbench_r.inst.mmap.norm', 1186655322),
-  (data_set_dir + '502.gcc_r.inst.mmap.norm', 16220268)
+  (data_set_dir + '507.cactuBSSN_r.in.mmap', 1035389426),
+  (data_set_dir + '508.namd_r.in.mmap', 1105244743),
+  (data_set_dir + '500.perlbench_r.in.mmap', 1186655322),
+  (data_set_dir + '502.gcc_r.in.mmap', 16220268)
 ]
 
-data_item_format = np.float32
+#data_item_format = np.float32
+feature_format = np.float32
+target_format = np.int16
 # total batch number is 816,286.56
 testbatchnum = 760000
 validbatchnum = 720000
@@ -24,5 +26,5 @@ valid_end = (validbatchnum + validbatchsize) * ori_batch_size
 
 input_length = 49
 tgt_length = 16
-inst_length = input_length
+cfg_num = 2
 seq_length = 256

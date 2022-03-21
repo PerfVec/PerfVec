@@ -2,15 +2,26 @@ import sys
 import os
 import argparse
 import numpy as np
-from CFG import inst_length, data_item_format
+from CFG import *
 
 parser = argparse.ArgumentParser(description="Transform from text to memmap dataset")
 parser.add_argument('--start', type=int, default=0)
 parser.add_argument('--end', type=int, default=0)
 parser.add_argument('-l', '--length', type=int, default=0)
+parser.add_argument('-f', '--feature', action='store_true', default=False)
+parser.add_argument('-t', '--target', action='store_true', default=False)
 parser.add_argument('fname', nargs='*')
 args = parser.parse_args()
 
+if args.feature:
+  inst_length = input_length
+  data_item_format = feature_format
+elif args.target:
+  inst_length = cfg_num * tgt_length
+  data_item_format = target_format
+else:
+  inst_length = input_length + tgt_length
+  data_item_format = data_item_format
 start = args.start
 end = args.end
 output = args.fname[0]

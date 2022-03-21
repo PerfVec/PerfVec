@@ -101,7 +101,10 @@ int main(int argc, char *argv[]) {
       if (res == FILE_END)
         break;
       assert(res == READ_INST);
-      assert(insts[i].pc == insts[0].pc);
+      if (insts[i].pc != insts[0].pc) {
+        cerr << "\nEarly stop at instruction " << instIdx << " (" << i << " " << insts[i].pc << " " << insts[0].pc << ")\n";
+        break;
+      }
       if (firstInst)
         insts[i].fetchDepth = 2;
     }
