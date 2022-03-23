@@ -7,7 +7,7 @@ from CFG import seq_length, input_length, tgt_length
 
 
 class SeqLSTM(nn.Module):
-  def __init__(self, nhidden, nlayers, nembed=0, gru=False, bi=False, norm=False):
+  def __init__(self, nhidden, nlayers, narchs=1, nembed=0, gru=False, bi=False, norm=False):
     super(SeqLSTM, self).__init__()
 
     if nembed != 0:
@@ -28,7 +28,7 @@ class SeqLSTM(nn.Module):
       self.lstm = nn.LSTM(nin, nhidden, nlayers, batch_first=True, bidirectional=bi)
     if bi:
       nhidden *= 2
-    self.linear = nn.Linear(nhidden, tgt_length)
+    self.linear = nn.Linear(nhidden, narchs * tgt_length)
 
   #def init_hidden(self):
   #  # type: () -> Tuple[nn.Parameter, nn.Parameter]
@@ -49,11 +49,37 @@ class SeqLSTM(nn.Module):
 
 
 class InsLSTM(SeqLSTM):
-  def __init__(self, nhidden, nlayers, nembed=0, gru=False, bi=False, norm=False):
-    super().__init__(nhidden, nlayers, nembed, gru, bi, norm)
+  def __init__(self, nhidden, nlayers, narchs=1, nembed=0, gru=False, bi=False, norm=False):
+    super().__init__(nhidden, nlayers, narchs, nembed, gru, bi, norm)
 
   def forward(self, x):
     x = super().forward(x)
+    return x[:, -1, :]
+
+
+class SeqEmLSTM(SeqLSTM):
+  def __init__(self, nhidden, nlayers, narchs, nembed=0, gru=False, bi=False, norm=False):
+    super().__init__(nhidden, nlayers, 1, nembed, gru, bi, norm)
+    self.arch_embed = nn.Embedding(narchs, (nhidden + 1) * tgt_length)
+
+  def forward(self, x, a):
+    if self.embed:
+      x = self.inst_embed(x)
+    if self.norm:
+      #x = self.inst_norm(x.transpose(1, 2)).transpose(1, 2)
+      x = self.inst_norm(x)
+    x, _ = self.lstm(x)
+    arch = nn.arch_embed(a).view(tgt_length, nhidden + 1)
+    x = torch.nn.functional.linear(x, arch[:, 0:nhidden], bias=arch[:, nhidden])
+    return x
+
+
+class InsEmLSTM(SeqEmLSTM):
+  def __init__(self, nhidden, nlayers, narchs, nembed=0, gru=False, bi=False, norm=False):
+    super().__init__(nhidden, nlayers, narchs, nembed, gru, bi, norm)
+
+  def forward(self, x, a):
+    x = super().forward(x, a)
     return x[:, -1, :]
 
 
