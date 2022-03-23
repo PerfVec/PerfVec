@@ -14,65 +14,82 @@ from CFG import *
 
 
 loss_fn = nn.MSELoss()
-inst_type = -2
 
 
-def analyze(args, output, target, data):
+def analyze(args, output, target, seq=False):
     target = target.detach().numpy()
-    data = data.detach().numpy()
     output = output.detach().numpy()
     np.set_printoptions(suppress=True)
     print(output.shape)
     for i in range(tgt_length):
-        cur_output = output[:,:,i]
-        cur_target = target[:,:,i]
+        print(i, ":")
+        if seq:
+            cur_output = output[:,:,i]
+            cur_target = target[:,:,i]
+        else:
+            cur_output = output[:,i]
+            cur_target = target[:,i]
         #print("output:", cur_output)
-        print("target:", cur_target)
+        print("\ttarget:", cur_target)
         cur_output = np.rint(cur_output)
         cur_target = np.rint(cur_target)
-        print("norm output:", cur_output)
+        print("\tnorm output:", cur_output)
         errs = cur_target - cur_output
-        print("errors:", errs)
+        print("\terrors:", errs)
         errs = errs.ravel()
-        errs[errs < 0] = -errs[errs < 0]
-        #errs[cur_cla_target == num_classes - 1] = -1
-
-        #if inst_type >= -1:
-        #    for i in range(errs.size):
-        #        cur_inst_type = get_inst_type(data[i], 0, fs) - 1
-        #        #print(cur_inst_type)
-        #        assert cur_inst_type >= 0 and cur_inst_type < 37
-        #        if inst_type >= 0 and cur_inst_type != inst_type:
-        #            errs[i] = -1
-        #        elif inst_type == -1 and (cur_inst_type == 25 or cur_inst_type == 26):
-        #            errs[i] = -1
-        #    print(errs)
 
         flat_target = cur_target.ravel()
-        print("Err avg, persentage, and std:", np.average(errs[errs != -1]), "\t", np.sum(errs[errs != -1]) / np.sum(flat_target[errs != -1]), "\t", np.std(errs[errs != -1]))
-        print("data percentage:", errs[errs != -1].size / errs.size)
-        output_sum = np.sum(cur_output, axis=1)
-        target_sum = np.sum(cur_target, axis=1)
-        sum_errs = target_sum - output_sum
-        sum_errs[sum_errs < 0] = -sum_errs[sum_errs < 0]
-        print("Sum err avg, persentage, and std:", np.average(sum_errs), "\t", np.average(sum_errs / target_sum), "\t", np.std(sum_errs))
-        his = np.histogram(errs, bins=range(-1, 100))
-        print(his[0] / errs[errs != -1].size)
+        norm_errs = errs / (flat_target + 1)
+        print("\tError abs avg, norm abs avg, norm avg, and norm std:", np.average(np.abs(errs)), "\t", np.average(np.abs(norm_errs)), "\t", np.average(norm_errs), "\t", np.std(norm_errs))
+        if seq:
+            output_sum = np.sum(cur_output, axis=1)
+            target_sum = np.sum(cur_target, axis=1)
+            sum_errs = target_sum - output_sum
+            sum_errs[sum_errs < 0] = -sum_errs[sum_errs < 0]
+            print("Sum err avg, persentage, and std:", np.average(sum_errs), "\t", np.average(sum_errs / target_sum), "\t", np.std(sum_errs))
+        his = np.histogram(errs, bins=range(-10, 10))
+        print(his[0] / errs.size)
 
 
 def test(args, model, device, test_loader):
     model.eval()
     total_loss = 0
     with torch.no_grad():
+        total_output = torch.zeros(0, tgt_length)
+        total_target = torch.zeros(0, tgt_length)
         for data, target in test_loader:
+            total_target = torch.cat((total_target, target), 0)
             data, target = data.to(device), target.to(device)
             output = model(data)
             total_loss += loss_fn(output, target).item()
             if not args.no_cuda:
-                data, target, output = data.cpu(), target.cpu(), output.cpu()
-            analyze(args, output, target, data)
+                output = output.cpu()
+            total_output = torch.cat((total_output, output), 0)
     total_loss /= len(test_loader)
     print('Test set: Loss: {:.6f}'.format(total_loss), flush=True)
+    analyze(args, total_output, total_target)
+
+
+def simulate(args, model, device, test_loader):
+    model.eval()
+    start_t = time.time()
+    total_loss = 0
+    target_sum = torch.zeros(tgt_length, device=device)
+    output_sum = torch.zeros(tgt_length, device=device)
+    with torch.no_grad():
+        for data, target in test_loader:
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            target_sum += torch.sum(target, dim=0)
+            output_sum += torch.sum(output, dim=0)
+            total_loss += loss_fn(output, target).item()
+    end_t = time.time()
+    error = (output_sum - target_sum) / target_sum
+    print("Target:", target_sum)
+    print("Output:", output_sum)
+    print("Error:", error)
+    total_loss /= len(test_loader)
+    print('Loss: {:.6f} \tTime: {:.1f}'.format(total_loss, end_t - start_t), flush=True)
 
 
 def load_checkpoint(name, model, training=False, optimizer=None):
@@ -103,6 +120,10 @@ def main():
                         help='disables CUDA')
     parser.add_argument('--no-save', action='store_true', default=False,
                         help='do not save model')
+    parser.add_argument('--sim', action='store_true', default=False,
+                        help='simulates traces')
+    parser.add_argument('--sim-length', type=int, default=100000000, metavar='N',
+                        help='simulation length (default: 100000000)')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
     parser.add_argument('--checkpoints', required=True)
@@ -113,8 +134,8 @@ def main():
     torch.manual_seed(args.seed)
 
     #dataset = MemMappedDataset(data_file_name, total_size, test_start, test_end)
-    #dataset = CombinedMMDataset(4, test_start, test_end)
-    dataset = MemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
+    dataset = CombinedMMDataset(4, test_start, test_end)
+    #dataset = MemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
     #dataset = NormMemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
     kwargs = {'batch_size': args.batch_size,
               'shuffle': False}
@@ -133,6 +154,14 @@ def main():
     test(args, model, device, test_loader)
     if not args.no_save:
         save_ts_model(args.checkpoints, model, device)
+    if args.sim:
+        print("Simulate", args.sim_length, "instructions.")
+        for i in range(len(sim_datasets)):
+            print(sim_datasets[i][0], flush=True)
+            cur_dataset = MemMappedDataset(sim_datasets[i][0], sim_datasets[i][1], 0, args.sim_length)
+            test_loader = torch.utils.data.DataLoader(cur_dataset, **kwargs)
+            simulate(args, model, device, test_loader)
+            print('', flush=True)
 
 
 if __name__ == '__main__':
