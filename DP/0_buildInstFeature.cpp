@@ -19,8 +19,8 @@ double maxOut = 0;
 #include "inst_noflush_impl.h"
 
 int main(int argc, char *argv[]) {
-  assert(IN_LEN == 49 && IN_REG_SRC_BEGIN == 21 &&
-         IN_REG_DST_BEGIN == 37 && IN_OP == 0);
+  assert(IN_LEN == 51 && IN_REG_SRC_BEGIN == 23 &&
+         IN_REG_DST_BEGIN == 39 && IN_OP == 1);
   if (argc != 2) {
     cerr << "Usage: ./buildInstFeature <trace>" << endl;
     return 0;

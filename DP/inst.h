@@ -14,6 +14,7 @@ typedef long unsigned Addr;
 
 struct Inst {
   // Operation.
+  int isFault;
   int op;
   int isMicroOp;
   int isCondCtrl;
@@ -25,6 +26,8 @@ struct Inst {
   int isAtomic;
   int isStoreConditional;
   int isMemBar;
+  int isRdBar;
+  int isWrBar;
   int isQuiesce;
   int isNonSpeculative;
 
@@ -68,7 +71,7 @@ struct Inst {
   Tick sqOutTick;
 
   // Read one instruction from SQ and ROB traces.
-  Tick read(ifstream &ROBtrace, ifstream &SQtrace);
+  Tick read(ifstream &ROBtrace, ifstream &SQtrace, bool isSingleTrace = false);
 
   // Whether it is a normal store.
   bool inSQ() {

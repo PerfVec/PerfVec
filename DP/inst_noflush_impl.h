@@ -59,7 +59,8 @@ enum targetIdx {
 
 enum featureIdx {
   IN_BEGIN = 0,
-  IN_OP = IN_BEGIN,
+  IN_FAULT = IN_BEGIN,
+  IN_OP,
   IN_ST,
   IN_LD,
   IN_MICRO,
@@ -70,10 +71,10 @@ enum featureIdx {
   IN_SERIAL_AF,
   IN_SERIAL_BE,
   IN_SC,
-  IN_MEMBAR,
+  IN_RDBAR,
+  IN_WRBAR,
   IN_NON_SPEC,
   IN_BRANCHING,
-  //IN_MIS_PRED,
   IN_GBE_PRE,
   IN_GBE_NOW,
   IN_FETCH_LDIS,
@@ -81,22 +82,24 @@ enum featureIdx {
   IN_DATA_LLDDIS,
   IN_DATA_LSTDIS,
   IN_DATA_SDIS,
-  IN_REG_SRC_BEGIN, // 21
+  IN_REG_SRC_BEGIN, // 23
   IN_REG_SRC_END = IN_REG_SRC_BEGIN + 2*SRCREGNUM - 1,
-  IN_REG_DST_BEGIN, // 37
+  IN_REG_DST_BEGIN, // 39
   IN_REG_DST_END = IN_REG_DST_BEGIN + 2*DSTREGNUM - 1,
-  IN_LEN // 49
+  IN_LEN // 51
 };
 
 inline Addr getLine(Addr in) { return in & ~0x3f; }
 inline int getReg(int C, int I) { return C * MAXREGIDX + I + 1; }
 
-Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace) {
-  ROBtrace >> dec >> sqIdx;
+Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace, bool isSingleTrace) {
+  ROBtrace >> dec >> isFault >> sqIdx;
   if (ROBtrace.eof()) {
-    int tmp;
-    SQtrace >> tmp;
-    assert(SQtrace.eof());
+    if (!isSingleTrace) {
+      int tmp;
+      SQtrace >> tmp;
+      assert(SQtrace.eof());
+    }
     return FILE_END;
   }
   ifstream *trace = &ROBtrace;
@@ -111,16 +114,18 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace) {
     ROBtrace >> inTick >> completeTick >> outTick;
     ROBtrace >> decodeTick >> renameTick >> dispatchTick >> issueTick;
     assert(outTick >= completeTick);
-    if (sqIdx != -1) {
-      int sqIdx2;
+    if (isSingleTrace) {
+      ROBtrace >> storeTick >> sqOutTick;
+    } else if (sqIdx != -1 && !isFault) {
+      int isFault2, sqIdx2;
       Tick inTick2;
       int decodeTick2, renameTick2, dispatchTick2, issueTick2;
-      SQtrace >> sqIdx2 >> inTick2 >> completeTick2 >> outTick2 >>
+      SQtrace >> isFault2 >> sqIdx2 >> inTick2 >> completeTick2 >> outTick2 >>
           decodeTick2 >> renameTick2 >> dispatchTick2 >> issueTick2 >>
           storeTick >> sqOutTick;
       if (SQtrace.eof())
         return FILE_END;
-      assert(sqIdx2 == sqIdx && inTick2 == inTick &&
+      assert(isFault2 == isFault && sqIdx2 == sqIdx && inTick2 == inTick &&
              decodeTick2 == decodeTick && renameTick2 == renameTick &&
              dispatchTick2 == dispatchTick && issueTick2 == issueTick);
       assert(sqOutTick >= storeTick);
@@ -147,7 +152,7 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace) {
   // Read instruction type and etc.
   *trace >> op >> isMicroOp >> isCondCtrl >> isUncondCtrl >> isDirectCtrl >>
       isSquashAfter >> isSerializeAfter >> isSerializeBefore;
-  *trace >> isAtomic >> isStoreConditional >> isMemBar >> isQuiesce >>
+  *trace >> isAtomic >> isStoreConditional >> isRdBar >> isWrBar >> isQuiesce >>
       isNonSpeculative;
   assert((isMicroOp == 0 || isMicroOp == 1) &&
          (isCondCtrl == 0 || isCondCtrl == 1) &&
@@ -158,11 +163,13 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace) {
          (isSerializeBefore == 0 || isSerializeBefore == 1) &&
          isAtomic == 0 &&
          (isStoreConditional == 0 || isStoreConditional == 1) &&
-         (isMemBar == 0 || isMemBar == 1) &&
+         (isRdBar == 0 || isRdBar == 1) &&
+         (isWrBar == 0 || isWrBar == 1) &&
          isQuiesce == 0 &&
          (isNonSpeculative == 0 || isNonSpeculative == 1));
-  assert(!inSQ() || (completeTick2 == completeTick * TICK_STEP &&
-                     outTick2 == outTick * TICK_STEP));
+  assert(!inSQ() || isSingleTrace || isFault ||
+         (completeTick2 == completeTick * TICK_STEP &&
+          outTick2 == outTick * TICK_STEP));
 
   // Read data memory access info.
   *trace >> isAddr;
@@ -393,6 +400,7 @@ void Inst::dumpTargets(Tick startTick, double *out, Tick &memLdIdx, Tick &memStI
 
 void Inst::dumpFeatures(Tick startTick, double *out) {
   // Dump operations.
+  out[IN_FAULT] = isFault;
   out[IN_OP]  = op + 1;
   out[IN_ST]  = inSQ();
   out[IN_LD]  = isLoad();
@@ -404,7 +412,8 @@ void Inst::dumpFeatures(Tick startTick, double *out) {
   out[IN_SERIAL_AF] = isSerializeAfter;
   out[IN_SERIAL_BE] = isSerializeBefore;
   out[IN_SC] = isStoreConditional;
-  out[IN_MEMBAR] = isMemBar;
+  out[IN_RDBAR] = isRdBar;
+  out[IN_WRBAR] = isWrBar;
   out[IN_NON_SPEC] = isNonSpeculative;
 
   out[IN_BRANCHING] = isBranching;

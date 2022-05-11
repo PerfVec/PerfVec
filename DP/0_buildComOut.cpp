@@ -20,6 +20,7 @@ int maxOut = 0;
 
 class SimModule {
 public:
+  bool isSingleTrace;
   ifstream trace;
   ifstream sqtrace;
 
@@ -49,14 +50,15 @@ public:
     outputName.replace(outputName.end()-3, outputName.end(), "sq.txt");
     sqtrace.open(outputName);
     if (!sqtrace.is_open()) {
-      cerr << "Cannot open SQ trace file " << outputName << ".\n";
-      return false;
-    }
+      cerr << "Single trace input.\n";
+      isSingleTrace = true;
+    } else
+      isSingleTrace = false;
     return true;
   }
 
   Tick readInst(Inst &inst) {
-    return inst.read(trace, sqtrace);
+    return inst.read(trace, sqtrace, isSingleTrace);
   }
 
   void update(Inst &inst, double *out) {
