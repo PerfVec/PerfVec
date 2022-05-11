@@ -4,15 +4,20 @@ import subprocess
 from datetime import datetime
 
 bmk_list = [
-  #"500.perlbench_r",
+  "500.perlbench_r",
   "502.gcc_r",
   "507.cactuBSSN_r",
   "508.namd_r"
 ]
 
 cfg_list = [
-  "trace_se_test",
-  "trace_se_test_pk"
+  "trace_set_arm3",
+  "trace_set_ex5",
+  "trace_set_pk",
+  "trace_set_o3",
+  "trace_set_minor2",
+  "trace_set_hpi",
+  "trace_set_ex5l"
 ]
 
 parser = argparse.ArgumentParser(description="Combine output of multiple configurations")
