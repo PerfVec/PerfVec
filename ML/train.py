@@ -22,7 +22,7 @@ loss_fn = nn.MSELoss()
 
 
 class ModelSet:
-    def __init__(self, idx, name, model, optimizer):
+    def __init__(self, idx, name, model, optimizer, scheduler):
         self.idx = idx
         self.name = name
         self.model = model
@@ -30,6 +30,7 @@ class ModelSet:
         self.min_loss = float("inf")
         self.cur_loss = 0
         self.total_loss = 0
+        self.scheduler = scheduler
 
 
 def train_mul(args, models, device, train_loader, epoch, rank):
@@ -59,7 +60,43 @@ def train_mul(args, models, device, train_loader, epoch, rank):
     if args.distributed:
         dist.barrier()
     for ms in models:
-        ms.total_loss /= len(train_loader)
+        ms.total_loss /= len(train_loader.dataset)
+        print('Train Epoch {} {}: {} \tLoss: {:.6f} \tTime: {:.1f}'.format(
+            epoch, ms.idx, rank, ms.total_loss, end_t - start_t), flush=True)
+
+
+def train_sbatch_mul(args, models, device, train_loader, epoch, rank):
+    for ms in models:
+        ms.model.train()
+        ms.total_loss = 0
+    start_t = time.time()
+    print_threshold = max(len(train_loader) // 100, 1)
+    for batch_idx, (data, target) in enumerate(train_loader):
+        data, target = data.to(device), target.to(device)
+        for i in range(args.sbatch_size):
+            cur_data = data[:,i:i+seq_length,:]
+            cur_target = target[:,i,:]
+            for ms in models:
+                ms.optimizer.zero_grad()
+                output = ms.model(cur_data)
+                loss = loss_fn(output, cur_target)
+                ms.total_loss += loss.item()
+                loss.backward()
+                if args.clip > 0:
+                    nn.utils.clip_grad_norm_(ms.model.parameters(), args.clip)
+                ms.optimizer.step()
+        if batch_idx % print_threshold == print_threshold - 1 and rank == 0:
+            print('.', flush=True, end='')
+        if args.dry_run:
+            break
+    if rank == 0:
+        print('', flush=True)
+    end_t = time.time()
+    if args.distributed:
+        dist.barrier()
+    for ms in models:
+        ms.total_loss /= len(train_loader.dataset)
+        ms.total_loss /= args.sbatch_size
         print('Train Epoch {} {}: {} \tLoss: {:.6f} \tTime: {:.1f}'.format(
             epoch, ms.idx, rank, ms.total_loss, end_t - start_t), flush=True)
 
@@ -75,7 +112,28 @@ def test_mul(args, models, device, test_loader, rank):
                 output = ms.model(data)
                 ms.total_loss += loss_fn(output, target).item()
     for ms in models:
-        ms.total_loss /= len(test_loader)
+        ms.total_loss /= len(test_loader.dataset)
+        ms.cur_loss = ms.total_loss
+        print('Test set {} {}: Loss: {:.6f}'.format(
+            ms.idx, rank, ms.total_loss), flush=True)
+
+
+def test_sbatch_mul(args, models, device, test_loader, rank):
+    for ms in models:
+        ms.model.eval()
+        ms.total_loss = 0
+    with torch.no_grad():
+        for data, target in test_loader:
+            data, target = data.to(device), target.to(device)
+            for i in range(args.sbatch_size):
+                cur_data = data[:,i:i+seq_length,:]
+                cur_target = target[:,i,:]
+                for ms in models:
+                    output = ms.model(cur_data)
+                    ms.total_loss += loss_fn(output, cur_target).item()
+    for ms in models:
+        ms.total_loss /= len(test_loader.dataset)
+        ms.total_loss /= args.sbatch_size
         ms.cur_loss = ms.total_loss
         print('Test set {} {}: Loss: {:.6f}'.format(
             ms.idx, rank, ms.total_loss), flush=True)
@@ -139,8 +197,12 @@ def main_rank(rank, args):
 
     #dataset1 = MemMappedDataset(data_file_name, total_size, 0, args.train_size)
     #dataset2 = MemMappedDataset(data_file_name, total_size, valid_start, valid_end)
-    dataset1 = CombinedMMDataset(4, 0, args.train_size)
-    dataset2 = CombinedMMDataset(4, valid_start, valid_end)
+    if args.sbatch_train:
+        dataset1 = CombinedMMBDataset(4, 0, args.train_size)
+        dataset2 = CombinedMMBDataset(4, valid_start, valid_end)
+    else:
+        dataset1 = CombinedMMDataset(4, 0, args.train_size)
+        dataset2 = CombinedMMDataset(4, valid_start, valid_end)
     #dataset1 = MemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], 0, args.train_size)
     #dataset2 = MemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], valid_start, valid_end)
     #dataset1 = NormMemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], 0, args.train_size)
@@ -198,12 +260,14 @@ def main_rank(rank, args):
             wd_arg = {'weight_decay': args.wd}
             opt_args.update(wd_arg)
         optimizer = optim.Adam(model.parameters(), **opt_args)
-        models.append(ModelSet(i, name, model, optimizer))
+        scheduler = None
+        if args.lr_step > 0:
+            scheduler = StepLR(optimizer, step_size=args.lr_step, verbose=True)
+        models.append(ModelSet(i, name, model, optimizer, scheduler))
         i += 1
         #ori_lr = optimizer.defaults['lr']
     start_epoch = 1
 
-    #scheduler = StepLR(optimizer, step_size=1)
     for epoch in range(start_epoch, args.epochs + 1):
         if args.distributed:
             dist.barrier()
@@ -211,10 +275,16 @@ def main_rank(rank, args):
         #lr = adjust_learning_rate(optimizer, epoch - 1, ori_lr)
         #if rank == 0:
         #    print("Epoch", epoch, "with lr", lr, flush=True)
-        train_mul(args, models, device, train_loader, epoch, rank)
+        if args.sbatch_train:
+            train_sbatch_mul(args, models, device, train_loader, epoch, rank)
+        else:
+            train_mul(args, models, device, train_loader, epoch, rank)
         if args.distributed:
             test_sampler.set_epoch(epoch - 1)
-        test_mul(args, models, device, test_loader, rank)
+        if args.sbatch_train:
+            test_sbatch_mul(args, models, device, test_loader, rank)
+        else:
+            test_mul(args, models, device, test_loader, rank)
         for ms in models:
             if args.distributed:
                 cur_loss = torch.tensor(ms.cur_loss).to(device)
@@ -228,7 +298,8 @@ def main_rank(rank, args):
                         save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args.lr, True)
                 if (not args.no_save_model) and epoch % args.save_interval == 0:
                     save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args.lr)
-        #scheduler.step()
+            if args.lr_step > 0:
+                ms.scheduler.step()
 
     if args.distributed:
         # Clean up.
@@ -248,12 +319,18 @@ def main():
                         help='initial learning rate')
     parser.add_argument('--wd', type=float, default=0, metavar='N',
                         help='weight decay rate')
+    parser.add_argument('--lr-step', type=int, default=0,
+                        help='lr scheduler step size')
     parser.add_argument('--clip', type=float, default=0, metavar='N',
                         help='gradient normalization value (default: 0)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
     parser.add_argument('--dry-run', action='store_true', default=False,
                         help='quickly check a single pass')
+    parser.add_argument('--sbatch-train', action='store_true', default=False,
+                        help='uses small batch training')
+    parser.add_argument('--sbatch-size', type=int, default=512, metavar='N',
+                        help='small batch size (default: 512)')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
     parser.add_argument('--save-interval', type=int, default=10, metavar='N',
