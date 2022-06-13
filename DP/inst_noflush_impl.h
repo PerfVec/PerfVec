@@ -219,11 +219,11 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace, bool isSingleTrace) {
 }
 
 void printOP(Inst *i) {
-  fprintf(stderr, "OP: %d %d %d %d %d %d %d : %d %d %d %d %d %d\n", i->op,
-          i->isUncondCtrl, i->isCondCtrl, i->isDirectCtrl, i->isSquashAfter,
+  fprintf(stderr, "OP: %d %d %d %d %d %d %d %d : %d %d %d %d %d %d %d\n", i->isFault,
+          i->op, i->isUncondCtrl, i->isCondCtrl, i->isDirectCtrl, i->isSquashAfter,
           i->isSerializeBefore, i->isSerializeAfter, i->isAtomic,
           i->isStoreConditional, i->isQuiesce, i->isNonSpeculative,
-          i->isMemBar, i->isMisPredict);
+          i->isRdBar, i->isWrBar, i->isMisPredict);
 }
 
 template <class T>

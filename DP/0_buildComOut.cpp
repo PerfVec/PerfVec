@@ -105,6 +105,7 @@ int main(int argc, char *argv[]) {
       assert(res == READ_INST);
       if (insts[i].pc != insts[0].pc) {
         cerr << "\nEarly stop at instruction " << instIdx << " (" << i << " " << insts[i].pc << " " << insts[0].pc << ")\n";
+        printOP(&insts[0]);
         break;
       }
       if (firstInst)
