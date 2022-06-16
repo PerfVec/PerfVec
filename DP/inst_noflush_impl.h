@@ -116,6 +116,8 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace, bool isSingleTrace) {
     assert(outTick >= completeTick);
     if (isSingleTrace) {
       ROBtrace >> storeTick >> sqOutTick;
+    } else if (sqIdx != -1 && !isFault && ROBtrace.peek() != '\n') {
+      ROBtrace >> storeTick >> sqOutTick;
     } else if (sqIdx != -1 && !isFault) {
       int isFault2, sqIdx2;
       Tick inTick2;
@@ -125,9 +127,10 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace, bool isSingleTrace) {
           storeTick >> sqOutTick;
       if (SQtrace.eof())
         return FILE_END;
-      assert(isFault2 == isFault && sqIdx2 == sqIdx && inTick2 == inTick &&
-             decodeTick2 == decodeTick && renameTick2 == renameTick &&
-             dispatchTick2 == dispatchTick && issueTick2 == issueTick);
+      assert(isFault2 == isFault && (sqIdx2 == sqIdx || sqIdx == 0) &&
+             inTick2 == inTick && decodeTick2 == decodeTick &&
+             renameTick2 == renameTick && dispatchTick2 == dispatchTick &&
+             issueTick2 == issueTick);
       assert(sqOutTick >= storeTick);
       trace = &SQtrace;
     } else {
@@ -219,10 +222,10 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace, bool isSingleTrace) {
 }
 
 void printOP(Inst *i) {
-  fprintf(stderr, "OP: %d %d %d %d %d %d %d %d : %d %d %d %d %d %d %d\n", i->isFault,
-          i->op, i->isUncondCtrl, i->isCondCtrl, i->isDirectCtrl, i->isSquashAfter,
-          i->isSerializeBefore, i->isSerializeAfter, i->isAtomic,
-          i->isStoreConditional, i->isQuiesce, i->isNonSpeculative,
+  fprintf(stderr, "OP: %d %d %d %d %d %d %d %d : %d %d %d %d %d %d %d\n",
+          i->isFault, i->op, i->isUncondCtrl, i->isCondCtrl, i->isDirectCtrl,
+          i->isSquashAfter, i->isSerializeBefore, i->isSerializeAfter,
+          i->isAtomic, i->isStoreConditional, i->isQuiesce, i->isNonSpeculative,
           i->isRdBar, i->isWrBar, i->isMisPredict);
 }
 
@@ -310,10 +313,15 @@ BranchEntropy getBranchEntropy(Addr pc, bool taken) {
 }
 
 void Inst::dumpTargets(Tick startTick, double *out) {
-  dumpTargets(startTick, out, memLdIdx, memStIdx, lastFetchTick, lastCommitTick, lastSqOutTick, lastDecodeTick, lastRenameTick, lastDispatchTick);
+  dumpTargets(startTick, out, memLdIdx, memStIdx, lastFetchTick, lastCommitTick,
+              lastSqOutTick, lastDecodeTick, lastRenameTick, lastDispatchTick);
 }
 
-void Inst::dumpTargets(Tick startTick, double *out, Tick &memLdIdx, Tick &memStIdx, Tick &lastFetchTick, Tick &lastCommitTick, Tick &lastSqOutTick, Tick &lastDecodeTick, Tick &lastRenameTick, Tick &lastDispatchTick) {
+void Inst::dumpTargets(Tick startTick, double *out, Tick &memLdIdx,
+                       Tick &memStIdx, Tick &lastFetchTick,
+                       Tick &lastCommitTick, Tick &lastSqOutTick,
+                       Tick &lastDecodeTick, Tick &lastRenameTick,
+                       Tick &lastDispatchTick) {
   // Calculate target latencies.
   assert(inTick >= startTick);
   Tick fetchLat = inTick - startTick;
