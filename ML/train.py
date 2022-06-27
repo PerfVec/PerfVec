@@ -197,7 +197,7 @@ def main_rank(rank, args):
 
     #dataset1 = MemMappedDataset(data_file_name, total_size, 0, args.train_size)
     #dataset2 = MemMappedDataset(data_file_name, total_size, valid_start, valid_end)
-    if args.sbatch_train:
+    if args.sbatch:
         dataset1 = CombinedMMBDataset(4, 0, args.train_size)
         dataset2 = CombinedMMBDataset(4, valid_start, valid_end)
     else:
@@ -275,13 +275,13 @@ def main_rank(rank, args):
         #lr = adjust_learning_rate(optimizer, epoch - 1, ori_lr)
         #if rank == 0:
         #    print("Epoch", epoch, "with lr", lr, flush=True)
-        if args.sbatch_train:
+        if args.sbatch:
             train_sbatch_mul(args, models, device, train_loader, epoch, rank)
         else:
             train_mul(args, models, device, train_loader, epoch, rank)
         if args.distributed:
             test_sampler.set_epoch(epoch - 1)
-        if args.sbatch_train:
+        if args.sbatch:
             test_sbatch_mul(args, models, device, test_loader, rank)
         else:
             test_mul(args, models, device, test_loader, rank)
@@ -327,7 +327,7 @@ def main():
                         help='disables CUDA training')
     parser.add_argument('--dry-run', action='store_true', default=False,
                         help='quickly check a single pass')
-    parser.add_argument('--sbatch-train', action='store_true', default=False,
+    parser.add_argument('--sbatch', action='store_true', default=False,
                         help='uses small batch training')
     parser.add_argument('--sbatch-size', type=int, default=512, metavar='N',
                         help='small batch size (default: 512)')
