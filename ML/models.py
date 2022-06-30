@@ -153,3 +153,35 @@ class TransformerModel(nn.Module):
         output = self.decoder(output)
         output = output.transpose(0, 1)
         return output
+
+
+class CNN(nn.Module):
+    def __init__(self, l, h, narchs=1, *args):
+        super(CNN, self).__init__()
+        self.conv = nn.ModuleList()
+        lc = input_length
+        num = seq_length
+        assert l > 0
+        assert len(args) == 4 * l
+        for i in range(l):
+          idx = i * 4
+          ks = args[idx]
+          oc = args[idx+1]
+          stride = args[idx+2]
+          pad = args[idx+3]
+          self.conv.append(nn.Conv1d(in_channels=lc, out_channels=oc, kernel_size=ks, stride=stride, padding=pad)) 
+          lc = oc
+          num = math.floor((num + 2 * pad - ks) / stride + 1)
+          print(i, num)
+        self.fc_in = int(num * lc)
+        self.fc1 = nn.Linear(self.fc_in, h)
+        self.fc2 = nn.Linear(h, narchs * tgt_length)
+
+    def forward(self, x):
+        x = x.view(-1, seq_length, input_length).transpose(2,1)
+        for cv in self.conv:
+          x = F.relu(cv(x))
+        x = x.view(-1, self.fc_in)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
