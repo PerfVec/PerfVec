@@ -179,9 +179,9 @@ def main():
     torch.manual_seed(args.seed)
 
     if args.sbatch:
-        dataset = CombinedMMBDataset(4, test_start, test_end)
+        dataset = CombinedMMBDataset(data_set_idx, test_start, test_end)
     else:
-        dataset = CombinedMMDataset(4, test_start, test_end)
+        dataset = CombinedMMDataset(data_set_idx, test_start, test_end)
         #dataset = MemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
         #dataset = NormMemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
     kwargs = {'batch_size': args.batch_size,
