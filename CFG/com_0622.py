@@ -15,13 +15,13 @@ datasets = [
 ]
 
 sim_datasets = [
-  #(data_set_dir + '508.namd_r.in.mmap.norm', 1105247403, 1105245197),
-  #(data_set_dir + '500.perlbench_r.in.mmap.norm', 1184866587, 1184864561)
-  #(data_set_dir + '507.cactuBSSN_r.in.mmap.norm', 1035397081, 24818298),
-  #(data_set_dir + '502.gcc_r.in.mmap.norm', 16220981, 8606664)
+  (data_set_dir + '508.namd_r.in.mmap.norm', 1105247403, 1105245197),
+  (data_set_dir + '500.perlbench_r.in.mmap.norm', 1184866587, 1184864561),
   (data_set_dir + '519.lbm_r.in.mmap.norm', 1104042304, 1103901432),
   (data_set_dir + '521.wrf_r.in.mmap.norm', 1084282512, 423028515),
   (data_set_dir + '505.mcf_r.in.mmap.norm', 1045214900, 1044819469)
+  #(data_set_dir + '507.cactuBSSN_r.in.mmap.norm', 1035397081, 24818298),
+  #(data_set_dir + '502.gcc_r.in.mmap.norm', 16220981, 8606664),
   #(data_set_dir + '523.xalancbmk_r.in.mmap.norm', 385894391, 1000130)
 ]
 
