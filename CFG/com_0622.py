@@ -52,13 +52,13 @@ valid_start = validbatchnum * ori_batch_size
 valid_end = (validbatchnum + validbatchsize) * ori_batch_size
 
 input_length = 51
-tgt_length = 16
+tgt_length = 3
 cfg_num = 7
 seq_length = 256
-#sel_tgt_length = 12
+ori_tgt_length = 16
 
-#def sel_batch_out(y):
-#  y = y.view(-1, cfg_num, tgt_length)
-#  #y = y[:, :, 0:sel_tgt_length].view(-1, cfg_num * sel_tgt_length)
-#  y = np.concatenate((y[:, :, 0:2], y[:, :, 6:tgt_length]), axis=2).view(-1, cfg_num * sel_tgt_length)
-#  return y
+def sel_batch_out(y):
+  y = y.reshape((-1, cfg_num, ori_tgt_length))
+  y = y[:, :, 0:tgt_length].reshape((-1, cfg_num * tgt_length))
+  #y = np.concatenate((y[:, :, 0:2], y[:, :, 6:ori_tgt_length]), axis=2).reshape(-1, cfg_num * tgt_length)
+  return y

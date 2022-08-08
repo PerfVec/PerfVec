@@ -55,3 +55,10 @@ input_length = 51
 tgt_length = 16
 cfg_num = 32
 seq_length = 256
+ori_tgt_length = 16
+
+def sel_batch_out(y):
+  y = y.reshape((-1, cfg_num, ori_tgt_length))
+  y = y[:, :, 0:tgt_length].reshape((-1, cfg_num * tgt_length))
+  #y = np.concatenate((y[:, :, 0:2], y[:, :, 6:ori_tgt_length]), axis=2).reshape(-1, cfg_num * tgt_length)
+  return y
