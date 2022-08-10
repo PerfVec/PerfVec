@@ -11,7 +11,7 @@ class MemMappedDataset(Dataset):
         self.in_arr = np.memmap(file_name, dtype=feature_format, mode='r',
                                 shape=(in_size, input_length))
         self.out_arr = np.memmap(get_out_name(file_name), dtype=target_format, mode='r',
-                                 shape=(out_size, tgt_length * cfg_num))
+                                 shape=(out_size, ori_tgt_length * cfg_num))
         assert in_size >= out_size
         if end <= start or end > out_size:
             raise AttributeError("End is illegal.")
@@ -96,7 +96,7 @@ class MemMappedBatchDataset(Dataset):
         self.in_arr = np.memmap(file_name, dtype=feature_format, mode='r',
                                 shape=(in_size, input_length))
         self.out_arr = np.memmap(get_out_name(file_name), dtype=target_format, mode='r',
-                                 shape=(out_size, tgt_length * cfg_num))
+                                 shape=(out_size, ori_tgt_length * cfg_num))
         self.batchsize = mm_batch_size
         assert in_size >= out_size
         if end <= start or end * self.batchsize > out_size:
@@ -119,6 +119,8 @@ class MemMappedBatchDataset(Dataset):
         else:
             x = np.copy(self.in_arr[idx+1-seq_length:idx+self.batchsize, :])
         y = np.copy(self.out_arr[idx:idx+self.batchsize, :])
+        if tgt_length != ori_tgt_length:
+            y = sel_batch_out(y)
         x = torch.from_numpy(x.astype('f'))
         y = torch.from_numpy(y.astype('f'))
         return x, y
