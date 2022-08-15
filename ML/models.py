@@ -90,13 +90,13 @@ class PositionalEncoding(nn.Module):
 
         position = torch.arange(max_len).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0)/d_model))
-        pe = torch.zeros(max_len, 1, d_model)
-        pe[:, 0, 0::2] = torch.sin(position * div_term)
-        pe[:, 0, 1::2] = torch.cos(position * div_term)
+        pe = torch.zeros(1, max_len, d_model)
+        pe[0, :, 0::2] = torch.sin(position * div_term)
+        pe[0, :, 1::2] = torch.cos(position * div_term)
         self.register_buffer('pe', pe)
 
     def forward(self, x):
-        x = x + self.pe[:seq_length]
+        x = x + self.pe[:, :seq_length, :]
         return self.dropout(x)
 
 
@@ -105,6 +105,7 @@ class TransformerModel(nn.Module):
                  nhead, # number of 'heads'
                  nhid,  # dimension of the feedforward network in nn.TransformerEncoder
                  nlayers, #number of encoder layers
+                 narchs=1,
                  nembed = 0,
                  dropout=0.1):
         super(TransformerModel, self).__init__()
@@ -121,10 +122,11 @@ class TransformerModel(nn.Module):
         encoder_layers = TransformerEncoderLayer(d_model=self.nfeatures,
                                                  nhead=nhead,
                                                  dim_feedforward=nhid,
-                                                 dropout=dropout)
+                                                 dropout=dropout,
+                                                 batch_first=True)
         self.encoder = TransformerEncoder(encoder_layers, nlayers)
 
-        self.decoder = nn.Linear(self.nfeatures, tgt_length)
+        self.linear = nn.Linear(self.nfeatures, narchs * tgt_length)
         #src_mask = self.generate_square_subsequent_mask(seq_length)
         #self.register_buffer('src_mask', src_mask)
         self.init_weights()
@@ -139,20 +141,18 @@ class TransformerModel(nn.Module):
         initrange = 0.1
         if self.embed:
           self.inst_embed.weight.data.uniform_(-initrange, initrange)
-        self.decoder.bias.data.zero_()
-        self.decoder.weight.data.uniform_(-initrange, initrange)
+        self.linear.bias.data.zero_()
+        self.linear.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, src):
-        src = src.transpose(0, 1)
+    def forward(self, x):
         if self.embed:
-          #src = F.relu(self.inst_embed(src))
-          src = self.inst_embed(src)
-        src = self.pos_encoder(src)
-        #output = self.encoder(src, self.src_mask)
-        output = self.encoder(src)
-        output = self.decoder(output)
-        output = output.transpose(0, 1)
-        return output
+          x = self.inst_embed(x)
+        x = self.pos_encoder(x)
+        #x = self.encoder(x, self.src_mask)
+        x = self.encoder(x)
+        x = x[:, -1, :]
+        x = self.linear(x)
+        return x
 
 
 class CNN(nn.Module):
@@ -175,7 +175,7 @@ class CNN(nn.Module):
           print(i, num)
         self.fc_in = int(num * lc)
         self.fc1 = nn.Linear(self.fc_in, h)
-        self.fc2 = nn.Linear(h, narchs * tgt_length)
+        self.linear = nn.Linear(h, narchs * tgt_length)
 
     def forward(self, x):
         x = x.view(-1, seq_length, input_length).transpose(2,1)
@@ -183,5 +183,5 @@ class CNN(nn.Module):
           x = F.relu(cv(x))
         x = x.view(-1, self.fc_in)
         x = F.relu(self.fc1(x))
-        x = self.fc2(x)
+        x = self.linear(x)
         return x
