@@ -13,7 +13,7 @@ class MemMappedDataset(Dataset):
         self.out_arr = np.memmap(get_out_name(file_name), dtype=target_format, mode='r',
                                  shape=(out_size, ori_tgt_length * cfg_num))
         assert in_size >= out_size
-        if end <= start or end > out_size:
+        if end < start or end > out_size:
             raise AttributeError("End is illegal.")
         self.start = start
         self.size = end - start
@@ -45,7 +45,7 @@ class CombinedMMDataset(Dataset):
         total_size = 0
         for i in range(file_num):
             total_size += datasets[i][2]
-        if end <= start or end > total_size:
+        if end < start or end > total_size:
             raise AttributeError("End is illegal.")
         # Calculate start and end for each dataset.
         self.file_num = file_num
@@ -99,7 +99,7 @@ class MemMappedBatchDataset(Dataset):
                                  shape=(out_size, ori_tgt_length * cfg_num))
         self.batchsize = mm_batch_size
         assert in_size >= out_size
-        if end <= start or end * self.batchsize > out_size:
+        if end < start or end * self.batchsize > out_size:
             raise AttributeError("End is illegal.")
         self.start = start
         self.size = end - start
@@ -134,7 +134,7 @@ class CombinedMMBDataset(Dataset):
         total_size = 0
         for i in range(file_num):
             total_size += datasets[i][2]
-        if end <= start or end > total_size:
+        if end < start or end > total_size:
             raise AttributeError("End is illegal.")
         if start % mm_batch_size != 0 or end % mm_batch_size != 0:
             raise AttributeError("Start or end is not aligned.")

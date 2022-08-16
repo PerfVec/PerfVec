@@ -52,7 +52,7 @@ valid_start = validbatchnum * ori_batch_size
 valid_end = (validbatchnum + validbatchsize) * ori_batch_size
 
 input_length = 51
-tgt_length = 3
+tgt_length = 16
 cfg_num = 7
 seq_length = 256
 ori_tgt_length = 16

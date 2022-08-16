@@ -18,11 +18,11 @@ sim_datasets = [
   (data_set_dir + '508.namd_r.in.mmap.norm', 1105247403, 1105245194),
   (data_set_dir + '500.perlbench_r.in.mmap.norm', 1184866587, 1184864561),
   (data_set_dir + '519.lbm_r.in.mmap.norm', 1104042304, 1103901340),
-  (data_set_dir + '505.mcf_r.in.mmap.norm', 1045214900, 1044819469),
-  (data_set_dir + '507.cactuBSSN_r.in.mmap.norm', 1035397081, 16511420),
-  (data_set_dir + '523.xalancbmk_r.in.mmap.norm', 385894391, 1000130),
-  (data_set_dir + '502.gcc_r.in.mmap.norm', 16220981, 69094),
-  (data_set_dir + '521.wrf_r.in.mmap.norm', 1084282512, 329386)
+  (data_set_dir + '505.mcf_r.in.mmap.norm', 1045214900, 1044819469)
+  #(data_set_dir + '507.cactuBSSN_r.in.mmap.norm', 1035397081, 16511420),
+  #(data_set_dir + '523.xalancbmk_r.in.mmap.norm', 385894391, 1000130),
+  #(data_set_dir + '502.gcc_r.in.mmap.norm', 16220981, 69094),
+  #(data_set_dir + '521.wrf_r.in.mmap.norm', 1084282512, 329386)
 ]
 
 def get_out_name(name):
