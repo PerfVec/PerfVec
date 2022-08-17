@@ -129,8 +129,8 @@ def simulate(args, model, device, test_loader):
     print("Mean error:", torch.mean(torch.abs(error), dim=0))
     averaged_sum = torch.mean(output_sum[:, 0:3], dim=1)
     averaged_error = (averaged_sum  - target_sum[:, 2]) / target_sum[:, 2]
-    print("Averaged time:", target_sum)
-    print("Averaged mean error:", torch.mean(torch.abs(averaged_error), dim=0))
+    print("Averaged time:", averaged_sum)
+    print("Averaged time mean error:", torch.mean(torch.abs(averaged_error), dim=0))
     total_loss /= len(test_loader.dataset)
     if args.sbatch:
         total_loss /= args.sbatch_size
