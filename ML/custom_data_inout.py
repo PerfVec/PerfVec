@@ -92,7 +92,7 @@ mm_batch_size = 512
 
 class MemMappedBatchDataset(Dataset):
 
-    def __init__(self, file_name, in_size, out_size, start, end):
+    def __init__(self, file_name, in_size, out_size, start, end, cfg_num):
         self.in_arr = np.memmap(file_name, dtype=feature_format, mode='r',
                                 shape=(in_size, input_length))
         self.out_arr = np.memmap(get_out_name(file_name), dtype=target_format, mode='r',
@@ -128,7 +128,7 @@ class MemMappedBatchDataset(Dataset):
 
 class CombinedMMBDataset(Dataset):
 
-    def __init__(self, file_num, start, end):
+    def __init__(self, file_num, start, end, cfg_num):
         if file_num > len(datasets):
             raise AttributeError("Require more files than that exist.")
         total_size = 0
@@ -156,7 +156,7 @@ class CombinedMMBDataset(Dataset):
             self.mm_sizes.append(int(datasets[i][2] * frac / mm_batch_size))
             print('Open', datasets[i][0], '(%d %d)' % (self.starts[i], self.mm_sizes[i]))
             self.mm_sets.append(MemMappedBatchDataset(datasets[i][0], datasets[i][1], datasets[i][2],
-                                self.starts[i], self.starts[i] + self.mm_sizes[i]))
+                                self.starts[i], self.starts[i] + self.mm_sizes[i], cfg_num))
             cum_start += self.starts[i]
             cum_size += self.mm_sizes[i]
             self.bounds.append(cum_size)
@@ -164,7 +164,7 @@ class CombinedMMBDataset(Dataset):
         self.mm_sizes.append(self.size - cum_size)
         print('Open', datasets[file_num-1][0], '(%d %d)' % (self.starts[file_num-1], self.mm_sizes[file_num-1]))
         self.mm_sets.append(MemMappedBatchDataset(datasets[file_num-1][0], datasets[file_num-1][1], datasets[file_num-1][2],
-                            self.starts[file_num-1], self.starts[file_num-1] + self.mm_sizes[file_num-1]))
+                            self.starts[file_num-1], self.starts[file_num-1] + self.mm_sizes[file_num-1], cfg_num))
         self.bounds.append(self.size)
 
     def __len__(self):

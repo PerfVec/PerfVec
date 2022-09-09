@@ -97,7 +97,7 @@ def test(args, model, device, test_loader):
     analyze(args, total_output, total_target)
 
 
-def simulate(args, model, device, test_loader):
+def simulate(args, model, device, test_loader, cfg_num):
     model.eval()
     start_t = time.time()
     total_loss = 0
@@ -183,7 +183,7 @@ def main():
     torch.manual_seed(args.seed)
 
     if args.sbatch:
-        dataset = CombinedMMBDataset(data_set_idx, test_start, test_end)
+        dataset = CombinedMMBDataset(data_set_idx, test_start, test_end, cfg_num)
     else:
         dataset = CombinedMMDataset(data_set_idx, test_start, test_end)
         #dataset = MemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
@@ -210,11 +210,11 @@ def main():
         for i in range(len(sim_datasets)):
             print(sim_datasets[i][0], flush=True)
             if args.sbatch:
-                cur_dataset = MemMappedBatchDataset(sim_datasets[i][0], sim_datasets[i][1], sim_datasets[i][2], 0, args.sim_length // args.sbatch_size + 1)
+                cur_dataset = MemMappedBatchDataset(sim_datasets[i][0], sim_datasets[i][1], sim_datasets[i][2], 0, args.sim_length // args.sbatch_size + 1, cfg_num)
             else:
                 cur_dataset = MemMappedDataset(sim_datasets[i][0], sim_datasets[i][1], 0, args.sim_length)
             test_loader = torch.utils.data.DataLoader(cur_dataset, **kwargs)
-            simulate(args, model, device, test_loader)
+            simulate(args, model, device, test_loader, cfg_num)
             print('', flush=True)
 
 
