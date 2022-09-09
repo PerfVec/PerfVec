@@ -7,7 +7,7 @@ from CFG import seq_length, input_length, tgt_length
 
 
 class SeqLSTM(nn.Module):
-  def __init__(self, nhidden, nlayers, narchs=1, nembed=0, gru=False, bi=False, norm=False):
+  def __init__(self, nhidden, nlayers, narchs=1, nembed=0, gru=False, bi=False, norm=False, bias=True):
     super(SeqLSTM, self).__init__()
 
     if nembed != 0:
@@ -28,7 +28,7 @@ class SeqLSTM(nn.Module):
       self.lstm = nn.LSTM(nin, nhidden, nlayers, batch_first=True, bidirectional=bi)
     if bi:
       nhidden *= 2
-    self.linear = nn.Linear(nhidden, narchs * tgt_length)
+    self.linear = nn.Linear(nhidden, narchs * tgt_length, bias=bias)
 
   #def init_hidden(self):
   #  # type: () -> Tuple[nn.Parameter, nn.Parameter]
@@ -37,20 +37,24 @@ class SeqLSTM(nn.Module):
   #    nn.Parameter(torch.zeros(1, 1, nhidden, requires_grad=True)),
   #  )
 
-  def forward(self, x):
+  def extract_representation(self, x):
     if self.embed:
       x = self.inst_embed(x)
     if self.norm:
       #x = self.inst_norm(x.transpose(1, 2)).transpose(1, 2)
       x = self.inst_norm(x)
     x, _ = self.lstm(x)
+    return x
+
+  def forward(self, x):
+    x = extract_representation(x)
     x = self.linear(x)
     return x
 
 
 class InsLSTM(SeqLSTM):
-  def __init__(self, nhidden, nlayers, narchs=1, nembed=0, gru=False, bi=False, norm=False):
-    super().__init__(nhidden, nlayers, narchs, nembed, gru, bi, norm)
+  def __init__(self, nhidden, nlayers, narchs=1, nembed=0, gru=False, bi=False, norm=False, bias=True):
+    super().__init__(nhidden, nlayers, narchs, nembed, gru, bi, norm, bias)
 
   def forward(self, x):
     x = super().forward(x)
