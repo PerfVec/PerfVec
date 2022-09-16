@@ -32,7 +32,8 @@ unordered_map<Addr, Tick> dataLineLdMap;
 unordered_map<Addr, Tick> dataLineStMap;
 #endif
 
-#define TICK_STEP 500
+//#define TICK_STEP 500
+#define TICK_STEP 100
 #define MAX_DIS 1000
 #define MAX_LDIS 100000000
 
