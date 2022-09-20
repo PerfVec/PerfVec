@@ -47,7 +47,7 @@ class SeqLSTM(nn.Module):
     return x
 
   def forward(self, x):
-    x = extract_representation(x)
+    x = self.extract_representation(x)
     x = self.linear(x)
     return x
 
