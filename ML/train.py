@@ -198,8 +198,8 @@ def main_rank(rank, args):
     #dataset1 = MemMappedDataset(data_file_name, total_size, 0, args.train_size)
     #dataset2 = MemMappedDataset(data_file_name, total_size, valid_start, valid_end)
     if args.sbatch:
-        dataset1 = CombinedMMBDataset(data_set_idx, 0, args.train_size, cfg_num)
-        dataset2 = CombinedMMBDataset(data_set_idx, valid_start, valid_end, cfg_num)
+        dataset1 = CombinedMMBDataset(data_set_idx, 0, args.train_size)
+        dataset2 = CombinedMMBDataset(data_set_idx, valid_start, valid_end)
     else:
         dataset1 = CombinedMMDataset(data_set_idx, 0, args.train_size)
         dataset2 = CombinedMMDataset(data_set_idx, valid_start, valid_end)
