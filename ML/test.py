@@ -76,6 +76,8 @@ def test(args, model, device, test_loader):
                     cur_data = data[:,i:i+seq_length,:]
                     cur_target = target[:,i,:]
                     output = model(cur_data)
+                    if args.unseen:
+                        output = sel_output(output)
                     total_loss += loss_fn(output, cur_target).item()
                     if not args.no_cuda:
                         output = output.cpu()
@@ -84,6 +86,8 @@ def test(args, model, device, test_loader):
                     total_target = torch.cat((total_target, cur_target), 0)
             else:
                 output = model(data)
+                if args.unseen:
+                    output = sel_output(output)
                 total_loss += loss_fn(output, target).item()
                 if not args.no_cuda:
                     output = output.cpu()
@@ -97,7 +101,7 @@ def test(args, model, device, test_loader):
     analyze(args, total_output, total_target)
 
 
-def simulate(args, model, device, test_loader, cfg_num):
+def simulate(args, model, device, test_loader):
     model.eval()
     start_t = time.time()
     total_loss = 0
@@ -111,11 +115,15 @@ def simulate(args, model, device, test_loader, cfg_num):
                     cur_data = data[:,i:i+seq_length,:]
                     cur_target = target[:,i,:]
                     output = model(cur_data)
+                    if args.unseen:
+                        output = sel_output(output)
                     target_sum += torch.sum(cur_target, dim=0)
                     output_sum += torch.sum(output, dim=0)
                     total_loss += loss_fn(output, cur_target).item()
             else:
                 output = model(data)
+                if args.unseen:
+                    output = sel_output(output)
                 target_sum += torch.sum(target, dim=0)
                 output_sum += torch.sum(output, dim=0)
                 total_loss += loss_fn(output, target).item()
@@ -130,7 +138,8 @@ def simulate(args, model, device, test_loader, cfg_num):
     averaged_sum = torch.mean(output_sum[:, 0:3], dim=1)
     averaged_error = (averaged_sum  - target_sum[:, 2]) / target_sum[:, 2]
     print("Averaged time:", averaged_sum)
-    print("Averaged time mean error:", torch.mean(torch.abs(averaged_error), dim=0))
+    print("Averaged error:", averaged_error)
+    print("Mean averaged error:", torch.mean(torch.abs(averaged_error), dim=0).item())
     total_loss /= len(test_loader.dataset)
     if args.sbatch:
         total_loss /= args.sbatch_size
@@ -175,6 +184,8 @@ def main():
                         help='small batch size (default: 512)')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
+    parser.add_argument('--unseen', action='store_true', default=False,
+                        help='uses different micro-architecture arrangement')
     parser.add_argument('--checkpoints', required=True)
     parser.add_argument('models', nargs='*')
     args = parser.parse_args()
@@ -183,7 +194,7 @@ def main():
     torch.manual_seed(args.seed)
 
     if args.sbatch:
-        dataset = CombinedMMBDataset(data_set_idx, test_start, test_end, cfg_num)
+        dataset = CombinedMMBDataset(data_set_idx, test_start, test_end)
     else:
         dataset = CombinedMMDataset(data_set_idx, test_start, test_end)
         #dataset = MemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
@@ -195,26 +206,33 @@ def main():
                        'pin_memory': True}
         kwargs.update(cuda_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset, **kwargs)
+    if args.unseen:
+        print("Test with different micro-architecture arrangement.")
+        assert "sel_output" in globals()
 
     assert len(args.models) == 1
     model = eval(args.models[0])
     load_checkpoint(args.checkpoints, model)
     #profile_model(model)
     device = torch.device("cuda" if use_cuda else "cpu")
+    if torch.cuda.device_count() > 1:
+        print ('Available devices', torch.cuda.device_count())
+        print ('Current cuda device', torch.cuda.current_device())
+        model = nn.DataParallel(model)
     model.to(device)
     test(args, model, device, test_loader)
-    if not args.no_save:
+    if not args.no_save and torch.cuda.device_count() <= 1:
         save_ts_model(args.checkpoints, model, device)
     if args.sim:
         print("Simulate", args.sim_length, "instructions.")
         for i in range(len(sim_datasets)):
             print(sim_datasets[i][0], flush=True)
             if args.sbatch:
-                cur_dataset = MemMappedBatchDataset(sim_datasets[i][0], sim_datasets[i][1], sim_datasets[i][2], 0, args.sim_length // args.sbatch_size + 1, cfg_num)
+                cur_dataset = MemMappedBatchDataset(sim_datasets[i][0], sim_datasets[i][1], sim_datasets[i][2], 0, args.sim_length // args.sbatch_size + 1)
             else:
                 cur_dataset = MemMappedDataset(sim_datasets[i][0], sim_datasets[i][1], 0, args.sim_length)
             test_loader = torch.utils.data.DataLoader(cur_dataset, **kwargs)
-            simulate(args, model, device, test_loader, cfg_num)
+            simulate(args, model, device, test_loader)
             print('', flush=True)
 
 
