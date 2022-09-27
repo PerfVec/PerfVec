@@ -2,8 +2,8 @@ import numpy as np
 
 # Data set configuration.
 data_set_dir = 'Data4/'
-data_set_idx = 17
-#data_set_idx = 7
+#data_set_idx = 17
+data_set_idx = 7
 datasets = [
   (data_set_dir + '508.namd_r.in.mmap.norm', 1105247403, 1105247398),
   (data_set_dir + '500.perlbench_r.in.mmap.norm', 1184866587, 1184866587),
@@ -12,23 +12,34 @@ datasets = [
   (data_set_dir + '521.wrf_r.in.mmap.norm', 1084282512, 329410),
   (data_set_dir + '505.mcf_r.in.mmap.norm', 1045214900, 1045214855),
   (data_set_dir + '523.xalancbmk_r.in.mmap.norm', 385894391, 1000130),
-  (data_set_dir + '525.x264_r.in.mmap', 1066019761, 1066019761),
-  (data_set_dir + '531.deepsjeng_r.in.mmap', 1051476976, 1051476976),
-  (data_set_dir + '548.exchange2_r.in.mmap', 1042957954, 1042957940),
-  (data_set_dir + '557.xz_r.in.mmap', 1043200017, 1043200017),
-  (data_set_dir + '999.specrand_ir.in.mmap', 59087074, 59087074),
-  (data_set_dir + '527.cam4_r.in.mmap', 1060183121, 692705),
-  (data_set_dir + '538.imagick_r.in.mmap', 115459544, 115459544),
-  (data_set_dir + '544.nab_r.in.mmap', 1050786112, 1050786112),
-  (data_set_dir + '549.fotonik3d_r.in.mmap', 1151356733, 1151356733),
-  (data_set_dir + '997.specrand_fr.in.mmap', 59087074, 59087074)
+  (data_set_dir + '525.x264_r.in.mmap.norm', 1066019761, 1066019761),
+  (data_set_dir + '531.deepsjeng_r.in.mmap.norm', 1051476976, 1051476976),
+  (data_set_dir + '548.exchange2_r.in.mmap.norm', 1042957954, 1042957940),
+  (data_set_dir + '557.xz_r.in.mmap.norm', 1043200017, 1043200017),
+  (data_set_dir + '999.specrand_ir.in.mmap.norm', 59087074, 59087074),
+  (data_set_dir + '527.cam4_r.in.mmap.norm', 1060183121, 692705),
+  (data_set_dir + '538.imagick_r.in.mmap.norm', 115459544, 115459544),
+  (data_set_dir + '544.nab_r.in.mmap.norm', 1050786112, 1050786112),
+  (data_set_dir + '549.fotonik3d_r.in.mmap.norm', 1151356733, 1151356733),
+  (data_set_dir + '997.specrand_fr.in.mmap.norm', 59087074, 59087074)
 ]
 
 sim_datasets = [
+  datasets[0],
+  datasets[1],
+  datasets[3],
+  datasets[5],
+  datasets[7],
+  datasets[8],
+  datasets[9],
+  datasets[10],
+  datasets[13],
+  datasets[14],
+  datasets[15]
 ]
 
 def get_out_name(name):
-  return name.replace("in.mmap.norm", "out.uarch0922.mmap")
+  return name.replace("in.mmap.norm", "out.mmap").replace(data_set_dir, data_set_dir + "uarch/")
 
 feature_format = np.float32
 target_format = np.uint16

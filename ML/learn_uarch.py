@@ -177,8 +177,8 @@ def main_rank(rank, args):
     torch.manual_seed(args.seed)
 
     if args.sbatch:
-        dataset1 = CombinedMMBDataset(data_set_idx, 0, args.train_size, args.arch_num)
-        dataset2 = CombinedMMBDataset(data_set_idx, valid_start, valid_end, args.arch_num)
+        dataset1 = CombinedMMBDataset(data_set_idx, 0, args.train_size)
+        dataset2 = CombinedMMBDataset(data_set_idx, valid_start, valid_end)
     else:
         dataset1 = CombinedMMDataset(data_set_idx, 0, args.train_size)
         dataset2 = CombinedMMDataset(data_set_idx, valid_start, valid_end)
@@ -213,7 +213,7 @@ def main_rank(rank, args):
     for param in model.parameters():
         param.requires_grad = False
     # Replace the linear layer.
-    model.linear = nn.Linear(args.rep_size, args.arch_num * tgt_length)
+    model.linear = nn.Linear(args.rep_size, cfg_num * tgt_length, bias=args.bias)
     device = torch.device("cuda" if use_cuda else "cpu")
     if args.distributed:
         device = rank
@@ -231,11 +231,14 @@ def main_rank(rank, args):
     if args.wd != 0:
         wd_arg = {'weight_decay': args.wd}
         opt_args.update(wd_arg)
-    optimizer = optim.Adam(model.linear.parameters(), **opt_args)
+    if args.distributed or torch.cuda.device_count() > 1:
+        optimizer = optim.Adam(model.module.linear.parameters(), **opt_args)
+    else:
+        optimizer = optim.Adam(model.linear.parameters(), **opt_args)
     scheduler = None
     if args.lr_step > 0:
         scheduler = StepLR(optimizer, step_size=args.lr_step, verbose=True)
-    models.append(ModelSet(0, name, model, optimizer, scheduler))
+    models.append(ModelSet(0, args.models[0] + "uarch", model, optimizer, scheduler))
     start_epoch = 1
 
     for epoch in range(start_epoch, args.epochs + 1):
@@ -278,8 +281,8 @@ def main():
     parser = argparse.ArgumentParser(description='Trace2Vec Training')
     parser.add_argument('--rep-size', type=int, default=256, metavar='N',
                         required=True, help='representation size')
-    parser.add_argument('--arch-num', type=int, default=1, metavar='N',
-                        help='architecture number (default: 1)')
+    parser.add_argument('--bias', action='store_true', default=False,
+                        help='use bias for the linear layer')
     parser.add_argument('--batch-size', type=int, default=4096, metavar='N',
                         help='input batch size (default: 4096)')
     parser.add_argument('--train-size', type=int, default=4096, metavar='N',
