@@ -135,11 +135,12 @@ def simulate(args, model, device, test_loader):
     print("Output:", output_sum)
     print("Error:", error)
     print("Mean error:", torch.mean(torch.abs(error), dim=0))
-    averaged_sum = torch.mean(output_sum[:, 0:3], dim=1)
-    averaged_error = (averaged_sum  - target_sum[:, 2]) / target_sum[:, 2]
-    print("Averaged time:", averaged_sum)
-    print("Averaged error:", averaged_error)
-    print("Mean averaged error:", torch.mean(torch.abs(averaged_error), dim=0).item())
+    if tgt_length >= 3:
+        averaged_sum = torch.mean(output_sum[:, 0:3], dim=1)
+        averaged_error = (averaged_sum  - target_sum[:, 2]) / target_sum[:, 2]
+        print("Averaged time:", averaged_sum)
+        print("Averaged error:", averaged_error)
+        print("Mean averaged error:", torch.mean(torch.abs(averaged_error), dim=0).item())
     total_loss /= len(test_loader.dataset)
     if args.sbatch:
         total_loss /= args.sbatch_size
