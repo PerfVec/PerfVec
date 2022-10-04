@@ -76,7 +76,7 @@ def test(args, model, device, test_loader):
                     cur_data = data[:,i:i+seq_length,:]
                     cur_target = target[:,i,:]
                     output = model(cur_data)
-                    if args.unseen:
+                    if args.select:
                         output = sel_output(output)
                     total_loss += loss_fn(output, cur_target).item()
                     if not args.no_cuda:
@@ -86,7 +86,7 @@ def test(args, model, device, test_loader):
                     total_target = torch.cat((total_target, cur_target), 0)
             else:
                 output = model(data)
-                if args.unseen:
+                if args.select:
                     output = sel_output(output)
                 total_loss += loss_fn(output, target).item()
                 if not args.no_cuda:
@@ -115,14 +115,14 @@ def simulate(args, model, device, test_loader):
                     cur_data = data[:,i:i+seq_length,:]
                     cur_target = target[:,i,:]
                     output = model(cur_data)
-                    if args.unseen:
+                    if args.select:
                         output = sel_output(output)
                     target_sum += torch.sum(cur_target, dim=0)
                     output_sum += torch.sum(output, dim=0)
                     total_loss += loss_fn(output, cur_target).item()
             else:
                 output = model(data)
-                if args.unseen:
+                if args.select:
                     output = sel_output(output)
                 target_sum += torch.sum(target, dim=0)
                 output_sum += torch.sum(output, dim=0)
@@ -130,17 +130,24 @@ def simulate(args, model, device, test_loader):
     end_t = time.time()
     target_sum = target_sum.view(cfg_num, tgt_length)
     output_sum = output_sum.view(cfg_num, tgt_length)
+    max_sum = torch.max(target_sum, output_sum)
     error = (output_sum - target_sum) / target_sum
+    #error = (output_sum - target_sum) / max_sum
     print("Target:", target_sum)
     print("Output:", output_sum)
     print("Error:", error)
     print("Mean error:", torch.mean(torch.abs(error), dim=0))
+    if args.uarch:
+        print("Mean unseen error:", torch.mean(torch.abs(error[1:]), dim=0))
     if tgt_length >= 3:
         averaged_sum = torch.mean(output_sum[:, 0:3], dim=1)
         averaged_error = (averaged_sum  - target_sum[:, 2]) / target_sum[:, 2]
+        #averaged_error = (averaged_sum  - target_sum[:, 2]) / max_sum[:, 2]
         print("Averaged time:", averaged_sum)
         print("Averaged error:", averaged_error)
         print("Mean averaged error:", torch.mean(torch.abs(averaged_error), dim=0).item())
+        if args.uarch:
+            print("Mean averaged unseen error:", torch.mean(torch.abs(averaged_error[1:]), dim=0).item())
     total_loss /= len(test_loader.dataset)
     if args.sbatch:
         total_loss /= args.sbatch_size
@@ -185,8 +192,10 @@ def main():
                         help='small batch size (default: 512)')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
-    parser.add_argument('--unseen', action='store_true', default=False,
-                        help='uses different micro-architecture arrangement')
+    parser.add_argument('--select', action='store_true', default=False,
+                        help='test set is a subset of training set')
+    parser.add_argument('--uarch', action='store_true', default=False,
+                        help='tests unseen micro-architectures')
     parser.add_argument('--checkpoints', required=True)
     parser.add_argument('models', nargs='*')
     args = parser.parse_args()
@@ -207,7 +216,7 @@ def main():
                        'pin_memory': True}
         kwargs.update(cuda_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset, **kwargs)
-    if args.unseen:
+    if args.select:
         print("Test with different micro-architecture arrangement.")
         assert "sel_output" in globals()
 
