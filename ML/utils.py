@@ -23,6 +23,9 @@ def generate_model_name(name, epoch=None):
     name = name.replace("]", "_")
     name = name.replace("-", "_")
     name = name.replace("=", "_")
+    name = name.replace("True", "1")
+    name = name.replace("False", "0")
+    name = name.replace("__", "_")
     if len(name) > 40:
         name = name[0:40]
     if epoch is not None:
