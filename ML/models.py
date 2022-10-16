@@ -44,6 +44,7 @@ class SeqLSTM(nn.Module):
       #x = self.inst_norm(x.transpose(1, 2)).transpose(1, 2)
       x = self.inst_norm(x)
     x, _ = self.lstm(x)
+    x = F.relu(x)
     return x
 
   def forward(self, x):
