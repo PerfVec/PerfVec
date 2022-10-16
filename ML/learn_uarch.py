@@ -214,6 +214,7 @@ def main_rank(rank, args):
         param.requires_grad = False
     # Replace the linear layer.
     model.linear = nn.Linear(args.rep_size, cfg_num * tgt_length, bias=args.bias)
+    profile_model(model)
     device = torch.device("cuda" if use_cuda else "cpu")
     if args.distributed:
         device = rank
@@ -238,7 +239,7 @@ def main_rank(rank, args):
     scheduler = None
     if args.lr_step > 0:
         scheduler = StepLR(optimizer, step_size=args.lr_step, verbose=True)
-    models.append(ModelSet(0, args.models[0] + "uarch", model, optimizer, scheduler))
+    models.append(ModelSet(0, "uarch_" + args.models[0], model, optimizer, scheduler))
     start_epoch = 1
 
     for epoch in range(start_epoch, args.epochs + 1):
