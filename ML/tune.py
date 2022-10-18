@@ -210,8 +210,9 @@ def main_rank(rank, args):
     models = []
     model = eval(args.models[0])
     load_checkpoint(args.checkpoints, model)
-    for param in model.parameters():
-        param.requires_grad = False
+    if args.uarch:
+        for param in model.parameters():
+            param.requires_grad = False
     # Replace the linear layer.
     model.linear = nn.Linear(args.rep_size, cfg_num * tgt_length, bias=args.bias)
     profile_model(model)
@@ -232,6 +233,8 @@ def main_rank(rank, args):
     if args.wd != 0:
         wd_arg = {'weight_decay': args.wd}
         opt_args.update(wd_arg)
+    if not args.uarch:
+        optimizer = optim.Adam(model.parameters(), **opt_args)
     if args.distributed or torch.cuda.device_count() > 1:
         optimizer = optim.Adam(model.module.linear.parameters(), **opt_args)
     else:
@@ -239,7 +242,11 @@ def main_rank(rank, args):
     scheduler = None
     if args.lr_step > 0:
         scheduler = StepLR(optimizer, step_size=args.lr_step, verbose=True)
-    models.append(ModelSet(0, "uarch_" + args.models[0], model, optimizer, scheduler))
+    if args.uarch:
+        name = "uarch_" + args.models[0]
+    else:
+        name = "ft_" + args.models[0]
+    models.append(ModelSet(0, name, model, optimizer, scheduler))
     start_epoch = 1
 
     for epoch in range(start_epoch, args.epochs + 1):
@@ -280,6 +287,8 @@ def main_rank(rank, args):
 def main():
     # Training settings
     parser = argparse.ArgumentParser(description='Trace2Vec Training')
+    parser.add_argument('--uarch', action='store_true', default=False,
+                        help='learn micro-architecture representations only')
     parser.add_argument('--rep-size', type=int, default=256, metavar='N',
                         required=True, help='representation size')
     parser.add_argument('--bias', action='store_true', default=False,
