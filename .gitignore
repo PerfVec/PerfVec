@@ -12,4 +12,5 @@ res
 log
 checkpoints
 stats
+fig
 DP/build*
