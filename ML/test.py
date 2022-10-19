@@ -8,7 +8,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from .custom_data import *
-from .utils import profile_model
+from .utils import profile_model, get_representation_dim
 from .models import *
 from CFG import *
 
@@ -158,6 +158,29 @@ def simulate(args, model, device, test_loader):
     print('Loss: {:.6f} \tTime: {:.1f}'.format(total_loss, end_t - start_t), flush=True)
 
 
+def get_program_representation(args, model, device, test_loader, rep_dim):
+    model.eval()
+    start_t = time.time()
+    rep_sum = torch.zeros(rep_dim, device=device)
+    with torch.no_grad():
+        for data, target in test_loader:
+            data = data.to(device)
+            if args.sbatch:
+                for i in range(args.sbatch_size):
+                    cur_data = data[:,i:i+seq_length,:]
+                    #rep = model.extract_representation(cur_data)
+                    _, rep = model(cur_data)
+                    rep_sum += torch.sum(rep, dim=0)
+            else:
+                rep = model.extract_representation(data)
+                rep_sum += torch.sum(rep, dim=0)
+    end_t = time.time()
+    rep_sum = rep_sum.cpu()
+    print("Representation:", rep_sum)
+    print('Time: {:.1f}'.format(end_t - start_t), flush=True)
+    return rep_sum
+
+
 def load_checkpoint(name, model, training=False, optimizer=None):
     assert 'checkpoints/' in name
     cp = torch.load(name, map_location=torch.device('cpu'))
@@ -179,17 +202,19 @@ def save_ts_model(name, model, device):
 
 def main():
     # Training settings
-    parser = argparse.ArgumentParser(description='SIMNET Testing')
+    parser = argparse.ArgumentParser(description='Trace2Vec Testing')
+    parser.add_argument('--sim', action='store_true', default=False,
+                        help='simulates traces')
+    parser.add_argument('--rep', action='store_true', default=False,
+                        help='extracts program representations')
+    parser.add_argument('--sim-length', type=int, default=100000000, metavar='N',
+                        help='simulation length (default: 100000000)')
     parser.add_argument('--batch-size', type=int, default=4096, metavar='N',
                         help='input batch size (default: 4096)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA')
     parser.add_argument('--no-save', action='store_true', default=False,
                         help='do not save model')
-    parser.add_argument('--sim', action='store_true', default=False,
-                        help='simulates traces')
-    parser.add_argument('--sim-length', type=int, default=100000000, metavar='N',
-                        help='simulation length (default: 100000000)')
     parser.add_argument('--sbatch', action='store_true', default=False,
                         help='uses small batch training')
     parser.add_argument('--sbatch-size', type=int, default=512, metavar='N',
@@ -207,25 +232,9 @@ def main():
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     torch.manual_seed(args.seed)
 
-    if args.sbatch:
-        dataset = CombinedMMBDataset(data_set_idx, test_start, test_end)
-    else:
-        dataset = CombinedMMDataset(data_set_idx, test_start, test_end)
-        #dataset = MemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
-        #dataset = NormMemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
-    kwargs = {'batch_size': args.batch_size,
-              'shuffle': False}
-    if use_cuda:
-        cuda_kwargs = {'num_workers': 1,
-                       'pin_memory': True}
-        kwargs.update(cuda_kwargs)
-    test_loader = torch.utils.data.DataLoader(dataset, **kwargs)
-    if args.select:
-        print("Test with different micro-architecture arrangement.")
-        assert "sel_output" in globals()
-
     assert len(args.models) == 1
     model = eval(args.models[0])
+    rep_dim = get_representation_dim(model)
     load_checkpoint(args.checkpoints, model)
     #profile_model(model)
     device = torch.device("cuda" if use_cuda else "cpu")
@@ -234,11 +243,34 @@ def main():
         print ('Current cuda device', torch.cuda.current_device())
         model = nn.DataParallel(model)
     model.to(device)
-    test(args, model, device, test_loader)
-    if not args.no_save and torch.cuda.device_count() <= 1:
-        save_ts_model(args.checkpoints, model, device)
-    if args.sim:
-        print("Simulate", args.sim_length, "instructions.")
+
+    kwargs = {'batch_size': args.batch_size,
+              'shuffle': False}
+    if use_cuda:
+        cuda_kwargs = {'num_workers': 1,
+                       'pin_memory': True}
+        kwargs.update(cuda_kwargs)
+
+    if not args.rep:
+        if args.sbatch:
+            dataset = CombinedMMBDataset(data_set_idx, test_start, test_end)
+        else:
+            dataset = CombinedMMDataset(data_set_idx, test_start, test_end)
+            #dataset = MemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
+            #dataset = NormMemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
+        test_loader = torch.utils.data.DataLoader(dataset, **kwargs)
+        if args.select:
+            print("Test with different micro-architecture arrangement.")
+            assert "sel_output" in globals()
+        test(args, model, device, test_loader)
+        if not args.no_save and torch.cuda.device_count() <= 1:
+            save_ts_model(args.checkpoints, model, device)
+
+    if args.sim or args.rep:
+        print("Run", args.sim_length, "instructions.")
+        if args.rep:
+            all_rep = torch.zeros(len(sim_datasets), rep_dim)
+            torch.set_printoptions(threshold=1000)
         for i in range(len(sim_datasets)):
             print(sim_datasets[i][0], flush=True)
             if args.sbatch:
@@ -246,8 +278,15 @@ def main():
             else:
                 cur_dataset = MemMappedDataset(sim_datasets[i][0], sim_datasets[i][1], 0, args.sim_length)
             test_loader = torch.utils.data.DataLoader(cur_dataset, **kwargs)
-            simulate(args, model, device, test_loader)
+            if args.rep:
+                all_rep[i] = get_program_representation(args, model, device, test_loader, rep_dim)
+            else:
+                simulate(args, model, device, test_loader)
             print('', flush=True)
+        if args.rep:
+            name = args.checkpoints.replace("checkpoints/", "res/prep_")
+            print("Save program representations to", name)
+            torch.save(all_rep, name)
 
 
 if __name__ == '__main__':

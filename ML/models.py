@@ -51,6 +51,9 @@ class SeqLSTM(nn.Module):
     x = self.extract_representation(x)
     x = self.linear(x)
     return x
+    #rep = self.extract_representation(x)
+    #x = self.linear(rep)
+    #return x, rep
 
 
 class InsLSTM(SeqLSTM):
@@ -60,6 +63,8 @@ class InsLSTM(SeqLSTM):
   def forward(self, x):
     x = super().forward(x)
     return x[:, -1, :]
+    #x, rep = super().forward(x)
+    #return x[:, -1, :], rep[:, -1, :]
 
 
 class SeqEmLSTM(SeqLSTM):
