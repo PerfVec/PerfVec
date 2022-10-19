@@ -48,3 +48,9 @@ def profile_model(model, para=False):
                                              input_constructor=constructor, print_per_layer_stat=True, verbose=True)
     print('{:<30}  {:<8}'.format('Computational complexity: ', macs))
     print('{:<30}  {:<8}'.format('Number of parameters: ', params))
+
+
+def get_representation_dim(model):
+    rep = model.extract_representation(torch.zeros(1, seq_length, input_length))
+    print("Representation dimensionality is", rep.shape[2])
+    return rep.shape[2]

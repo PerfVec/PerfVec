@@ -13,7 +13,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim.lr_scheduler import StepLR
 
 from ML.custom_data import *
-from ML.utils import profile_model, generate_model_name
+from ML.utils import profile_model, generate_model_name, get_representation_dim
 from ML.models import *
 from CFG import *
 
@@ -209,12 +209,13 @@ def main_rank(rank, args):
     assert len(args.models) == 1
     models = []
     model = eval(args.models[0])
+    rep_dim = get_representation_dim(model)
     load_checkpoint(args.checkpoints, model)
     if args.uarch:
         for param in model.parameters():
             param.requires_grad = False
     # Replace the linear layer.
-    model.linear = nn.Linear(args.rep_size, cfg_num * tgt_length, bias=args.bias)
+    model.linear = nn.Linear(rep_dim, cfg_num * tgt_length, bias=args.bias)
     profile_model(model)
     device = torch.device("cuda" if use_cuda else "cpu")
     if args.distributed:
@@ -289,8 +290,6 @@ def main():
     parser = argparse.ArgumentParser(description='Trace2Vec Training')
     parser.add_argument('--uarch', action='store_true', default=False,
                         help='learn micro-architecture representations only')
-    parser.add_argument('--rep-size', type=int, default=256, metavar='N',
-                        required=True, help='representation size')
     parser.add_argument('--bias', action='store_true', default=False,
                         help='use bias for the linear layer')
     parser.add_argument('--batch-size', type=int, default=4096, metavar='N',
