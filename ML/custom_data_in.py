@@ -10,7 +10,10 @@ mm_batch_size = 512
 
 class MemMappedBatchDataset(Dataset):
 
-    def __init__(self, file_name, in_size, start, end):
+    def __init__(self, cfgs, start, end):
+        assert len(cfgs) == 2
+        file_name = cfgs[0]
+        in_size = cfgs[1]
         self.in_arr = np.memmap(file_name, dtype=feature_format, mode='r',
                                 shape=(in_size, input_length))
         self.batchsize = mm_batch_size
@@ -18,10 +21,6 @@ class MemMappedBatchDataset(Dataset):
             raise AttributeError("End is illegal.")
         self.start = start
         self.size = end - start
-
-    def __init__(self, cfgs, start, end):
-        assert len(cfgs) == 2
-        self.__init__(cfgs[0], cfgs[1], start, end)
 
     def __len__(self):
         return self.size
@@ -71,7 +70,7 @@ class CombinedMMBDataset(Dataset):
             self.starts.append(int(datasets[i][1] * (start / total_size) / mm_batch_size))
             self.mm_sizes.append(int(datasets[i][1] * frac / mm_batch_size))
             print('Open', datasets[i][0], '(%d %d)' % (self.starts[i], self.mm_sizes[i]))
-            self.mm_sets.append(MemMappedBatchDataset(datasets[i][0], datasets[i][1],
+            self.mm_sets.append(MemMappedBatchDataset(datasets[i],
                                 self.starts[i], self.starts[i] + self.mm_sizes[i]))
             cum_start += self.starts[i]
             cum_size += self.mm_sizes[i]
@@ -79,7 +78,7 @@ class CombinedMMBDataset(Dataset):
         self.starts.append(start - cum_start)
         self.mm_sizes.append(self.size - cum_size)
         print('Open', datasets[file_num-1][0], '(%d %d)' % (self.starts[file_num-1], self.mm_sizes[file_num-1]))
-        self.mm_sets.append(MemMappedBatchDataset(datasets[file_num-1][0], datasets[file_num-1][1],
+        self.mm_sets.append(MemMappedBatchDataset(datasets[file_num-1],
                             self.starts[file_num-1], self.starts[file_num-1] + self.mm_sizes[file_num-1]))
         self.bounds.append(self.size)
 

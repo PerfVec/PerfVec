@@ -7,7 +7,11 @@ from CFG import *
 
 class MemMappedDataset(Dataset):
 
-    def __init__(self, file_name, in_size, out_size, start, end):
+    def __init__(self, cfgs, start, end):
+        assert len(cfgs) == 3
+        file_name = cfgs[0]
+        in_size = cfgs[1]
+        out_size = cfgs[2]
         self.in_arr = np.memmap(file_name, dtype=feature_format, mode='r',
                                 shape=(in_size, input_length))
         self.out_arr = np.memmap(get_out_name(file_name), dtype=target_format, mode='r',
@@ -92,7 +96,11 @@ mm_batch_size = 512
 
 class MemMappedBatchDataset(Dataset):
 
-    def __init__(self, file_name, in_size, out_size, start, end):
+    def __init__(self, cfgs, start, end):
+        assert len(cfgs) == 3
+        file_name = cfgs[0]
+        in_size = cfgs[1]
+        out_size = cfgs[2]
         self.in_arr = np.memmap(file_name, dtype=feature_format, mode='r',
                                 shape=(in_size, input_length))
         self.out_arr = np.memmap(get_out_name(file_name), dtype=target_format, mode='r',
@@ -155,7 +163,7 @@ class CombinedMMBDataset(Dataset):
             self.starts.append(int(datasets[i][2] * (start / total_size) / mm_batch_size))
             self.mm_sizes.append(int(datasets[i][2] * frac / mm_batch_size))
             print('Open', datasets[i][0], '(%d %d)' % (self.starts[i], self.mm_sizes[i]))
-            self.mm_sets.append(MemMappedBatchDataset(datasets[i][0], datasets[i][1], datasets[i][2],
+            self.mm_sets.append(MemMappedBatchDataset(datasets[i],
                                 self.starts[i], self.starts[i] + self.mm_sizes[i]))
             cum_start += self.starts[i]
             cum_size += self.mm_sizes[i]
@@ -163,7 +171,7 @@ class CombinedMMBDataset(Dataset):
         self.starts.append(start - cum_start)
         self.mm_sizes.append(self.size - cum_size)
         print('Open', datasets[file_num-1][0], '(%d %d)' % (self.starts[file_num-1], self.mm_sizes[file_num-1]))
-        self.mm_sets.append(MemMappedBatchDataset(datasets[file_num-1][0], datasets[file_num-1][1], datasets[file_num-1][2],
+        self.mm_sets.append(MemMappedBatchDataset(datasets[file_num-1],
                             self.starts[file_num-1], self.starts[file_num-1] + self.mm_sizes[file_num-1]))
         self.bounds.append(self.size)
 
