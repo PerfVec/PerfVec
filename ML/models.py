@@ -45,15 +45,13 @@ class SeqLSTM(nn.Module):
       x = self.inst_norm(x)
     x, _ = self.lstm(x)
     x = F.relu(x)
+    #x = torch.sigmoid(x)
     return x
 
   def forward(self, x):
     x = self.extract_representation(x)
     x = self.linear(x)
     return x
-    #rep = self.extract_representation(x)
-    #x = self.linear(rep)
-    #return x, rep
 
 
 class InsLSTM(SeqLSTM):
@@ -63,8 +61,17 @@ class InsLSTM(SeqLSTM):
   def forward(self, x):
     x = super().forward(x)
     return x[:, -1, :]
-    #x, rep = super().forward(x)
-    #return x[:, -1, :], rep[:, -1, :]
+
+
+class InsLSTMRep(SeqLSTM):
+  def __init__(self, nhidden, nlayers, narchs=1, nembed=0, gru=False, bi=False, norm=False, bias=True):
+    super().__init__(nhidden, nlayers, narchs, nembed, gru, bi, norm, bias)
+
+  def forward(self, x):
+    rep = super().extract_representation(x)
+    rep = rep[:, -1, :]
+    x = self.linear(rep)
+    return x, rep
 
 
 class SeqEmLSTM(SeqLSTM):

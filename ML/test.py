@@ -101,15 +101,24 @@ def test(args, model, device, test_loader):
     analyze(args, total_output, total_target)
 
 
-def simulate(args, model, device, test_loader):
+def simulate(args, model, device, test_loader, name):
     model.eval()
     start_t = time.time()
     total_loss = 0
     target_sum = torch.zeros(cfg_num * tgt_length, device=device)
     output_sum = torch.zeros(cfg_num * tgt_length, device=device)
+    batch_target_sum = torch.zeros(cfg_num * tgt_length, device=device)
+    batch_output_sum = torch.zeros(cfg_num * tgt_length, device=device)
+    if args.phase:
+        ph_num = len(test_loader)
+        print(ph_num, "phases in total.")
+        ph_res = torch.zeros(ph_num, 2, cfg_num * tgt_length, device=device)
+        ph_idx = 0
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
+            batch_target_sum = 0
+            batch_output_sum = 0
             if args.sbatch:
                 for i in range(args.sbatch_size):
                     cur_data = data[:,i:i+seq_length,:]
@@ -117,16 +126,22 @@ def simulate(args, model, device, test_loader):
                     output = model(cur_data)
                     if args.select:
                         output = sel_output(output)
-                    target_sum += torch.sum(cur_target, dim=0)
-                    output_sum += torch.sum(output, dim=0)
+                    batch_target_sum += torch.sum(cur_target, dim=0)
+                    batch_output_sum += torch.sum(output, dim=0)
                     total_loss += loss_fn(output, cur_target).item()
             else:
                 output = model(data)
                 if args.select:
                     output = sel_output(output)
-                target_sum += torch.sum(target, dim=0)
-                output_sum += torch.sum(output, dim=0)
+                batch_target_sum += torch.sum(target, dim=0)
+                batch_output_sum += torch.sum(output, dim=0)
                 total_loss += loss_fn(output, target).item()
+            target_sum += batch_target_sum
+            output_sum += batch_output_sum
+            if args.phase:
+                ph_res[ph_idx, 0] = batch_target_sum
+                ph_res[ph_idx, 1] = batch_output_sum
+                ph_idx += 1
     end_t = time.time()
     target_sum = target_sum.view(cfg_num, tgt_length)
     output_sum = output_sum.view(cfg_num, tgt_length)
@@ -152,31 +167,52 @@ def simulate(args, model, device, test_loader):
         if args.uarch:
             print("Mean averaged unseen error:", torch.mean(torch.abs(averaged_error[1:]), dim=0).item())
             print("Mean normalized averaged unseen error:", torch.mean(torch.abs(norm_averaged_error[1:]), dim=0).item())
+    if args.phase:
+        assert ph_idx == ph_num
+        file_name = args.checkpoints.replace("checkpoints/", "res/ph_" + name + '_')
+        print("Save phase results to", file_name)
+        torch.save(ph_res.cpu(), file_name)
     total_loss /= len(test_loader.dataset)
     if args.sbatch:
         total_loss /= args.sbatch_size
     print('Loss: {:.6f} \tTime: {:.1f}'.format(total_loss, end_t - start_t), flush=True)
 
 
-def get_program_representation(args, model, device, test_loader, rep_dim):
+def get_program_representation(args, model, device, test_loader, rep_dim, name):
     model.eval()
     start_t = time.time()
     rep_sum = torch.zeros(rep_dim, device=device)
+    batch_rep_sum = torch.zeros(rep_dim, device=device)
+    if args.phase:
+        ph_num = len(test_loader)
+        print(ph_num, "phases in total.")
+        ph_res = torch.zeros(ph_num, rep_dim, device=device)
+        ph_idx = 0
     with torch.no_grad():
         for data, target in test_loader:
             data = data.to(device)
+            batch_rep_sum = 0
             if args.sbatch:
                 for i in range(args.sbatch_size):
                     cur_data = data[:,i:i+seq_length,:]
                     #rep = model.extract_representation(cur_data)
                     _, rep = model(cur_data)
-                    rep_sum += torch.sum(rep, dim=0)
+                    batch_rep_sum += torch.sum(rep, dim=0)
             else:
                 rep = model.extract_representation(data)
-                rep_sum += torch.sum(rep, dim=0)
+                batch_rep_sum += torch.sum(rep, dim=0)
+            rep_sum += batch_rep_sum
+            if args.phase:
+                ph_res[ph_idx] = batch_rep_sum
+                ph_idx += 1
     end_t = time.time()
     rep_sum = rep_sum.cpu()
     print("Representation:", rep_sum)
+    if args.phase:
+        assert ph_idx == ph_num
+        file_name = args.checkpoints.replace("checkpoints/", "res/phrep_" + name + '_')
+        print("Save phase representations to", file_name)
+        torch.save(ph_res.cpu(), file_name)
     print('Time: {:.1f}'.format(end_t - start_t), flush=True)
     return rep_sum
 
@@ -207,6 +243,8 @@ def main():
                         help='simulates traces')
     parser.add_argument('--rep', action='store_true', default=False,
                         help='extracts program representations')
+    parser.add_argument('--phase', action='store_true', default=False,
+                        help='phase simulation')
     parser.add_argument('--sim-length', type=int, default=100000000, metavar='N',
                         help='simulation length (default: 100000000)')
     parser.add_argument('--batch-size', type=int, default=4096, metavar='N',
@@ -272,16 +310,17 @@ def main():
             all_rep = torch.zeros(len(sim_datasets), rep_dim)
             torch.set_printoptions(threshold=1000)
         for i in range(len(sim_datasets)):
+            name = sim_datasets[i][0].replace(data_set_dir, '').replace(".in.mmap.norm", '')
             print(sim_datasets[i][0], flush=True)
             if args.sbatch:
-                cur_dataset = MemMappedBatchDataset(sim_datasets[i][0], sim_datasets[i][1], sim_datasets[i][2], 0, args.sim_length // args.sbatch_size + 1)
+                cur_dataset = MemMappedBatchDataset(sim_datasets[i], 0, args.sim_length // args.sbatch_size + 1)
             else:
                 cur_dataset = MemMappedDataset(sim_datasets[i][0], sim_datasets[i][1], 0, args.sim_length)
             test_loader = torch.utils.data.DataLoader(cur_dataset, **kwargs)
             if args.rep:
-                all_rep[i] = get_program_representation(args, model, device, test_loader, rep_dim)
+                all_rep[i] = get_program_representation(args, model, device, test_loader, rep_dim, name)
             else:
-                simulate(args, model, device, test_loader)
+                simulate(args, model, device, test_loader, name)
             print('', flush=True)
         if args.rep:
             name = args.checkpoints.replace("checkpoints/", "res/prep_")
