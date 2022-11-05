@@ -2,15 +2,15 @@ import argparse
 import os
 import sys
 import time
+import importlib
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+from .models import *
 from .custom_data import *
 from .utils import profile_model, get_representation_dim
-from .models import *
-from CFG import *
 
 
 loss_fn = nn.MSELoss()
@@ -63,7 +63,7 @@ def analyze(args, output, target, seq=False):
             print(his[0] / errs.size)
 
 
-def test(args, model, device, test_loader):
+def test(args, cfg, model, device, test_loader):
     model.eval()
     total_loss = 0
     total_output = torch.zeros(0, cfg_num * tgt_length)
@@ -73,7 +73,7 @@ def test(args, model, device, test_loader):
             data, target = data.to(device), target.to(device)
             if args.sbatch:
                 for i in range(args.sbatch_size):
-                    cur_data = data[:,i:i+seq_length,:]
+                    cur_data = data[:,i:i+cfg.seq_length,:]
                     cur_target = target[:,i,:]
                     output = model(cur_data)
                     if args.select:
@@ -101,7 +101,7 @@ def test(args, model, device, test_loader):
     analyze(args, total_output, total_target)
 
 
-def simulate(args, model, device, test_loader, name):
+def simulate(args, cfg, model, device, test_loader, name):
     model.eval()
     start_t = time.time()
     total_loss = 0
@@ -121,7 +121,7 @@ def simulate(args, model, device, test_loader, name):
             batch_output_sum = 0
             if args.sbatch:
                 for i in range(args.sbatch_size):
-                    cur_data = data[:,i:i+seq_length,:]
+                    cur_data = data[:,i:i+cfg.seq_length,:]
                     cur_target = target[:,i,:]
                     output = model(cur_data)
                     if args.select:
@@ -169,7 +169,7 @@ def simulate(args, model, device, test_loader, name):
             print("Mean normalized averaged unseen error:", torch.mean(torch.abs(norm_averaged_error[1:]), dim=0).item())
     if args.phase:
         assert ph_idx == ph_num
-        file_name = args.checkpoints.replace("checkpoints/", "res/ph_" + name + '_')
+        file_name = args.checkpoints.replace("checkpoints/", "res/ph_%s_%s_" % (args.cfg, name))
         print("Save phase results to", file_name)
         torch.save(ph_res.cpu(), file_name)
     total_loss /= len(test_loader.dataset)
@@ -178,7 +178,7 @@ def simulate(args, model, device, test_loader, name):
     print('Loss: {:.6f} \tTime: {:.1f}'.format(total_loss, end_t - start_t), flush=True)
 
 
-def get_program_representation(args, model, device, test_loader, rep_dim, name):
+def get_program_representation(args, cfg, model, device, test_loader, rep_dim, name):
     model.eval()
     start_t = time.time()
     rep_sum = torch.zeros(rep_dim, device=device)
@@ -194,7 +194,7 @@ def get_program_representation(args, model, device, test_loader, rep_dim, name):
             batch_rep_sum = 0
             if args.sbatch:
                 for i in range(args.sbatch_size):
-                    cur_data = data[:,i:i+seq_length,:]
+                    cur_data = data[:,i:i+cfg.seq_length,:]
                     #rep = model.extract_representation(cur_data)
                     _, rep = model(cur_data)
                     batch_rep_sum += torch.sum(rep, dim=0)
@@ -210,7 +210,7 @@ def get_program_representation(args, model, device, test_loader, rep_dim, name):
     print("Representation:", rep_sum)
     if args.phase:
         assert ph_idx == ph_num
-        file_name = args.checkpoints.replace("checkpoints/", "res/phrep_" + name + '_')
+        file_name = args.checkpoints.replace("checkpoints/", "res/phrep_%s_%s_" % (args.cfg, name))
         print("Save phase representations to", file_name)
         torch.save(ph_res.cpu(), file_name)
     print('Time: {:.1f}'.format(end_t - start_t), flush=True)
@@ -227,11 +227,11 @@ def load_checkpoint(name, model, training=False, optimizer=None):
     print("Loaded checkpoint", name)
 
 
-def save_ts_model(name, model, device):
+def save_ts_model(cfg, name, model, device):
     assert 'checkpoints/' in name
     name = name.replace('checkpoints/', 'models/')
     model.eval()
-    traced_script_module = torch.jit.trace(model, torch.rand(1, seq_length, input_length).to(device))
+    traced_script_module = torch.jit.trace(model, torch.rand(1, cfg.seq_length, cfg.input_length).to(device))
     traced_script_module.save(name)
     print("Saved model", name)
 
@@ -239,6 +239,7 @@ def save_ts_model(name, model, device):
 def main():
     # Training settings
     parser = argparse.ArgumentParser(description='Trace2Vec Testing')
+    parser.add_argument('--cfg', required=True, help='config file')
     parser.add_argument('--sim', action='store_true', default=False,
                         help='simulates traces')
     parser.add_argument('--rep', action='store_true', default=False,
@@ -267,6 +268,9 @@ def main():
     parser.add_argument('models', nargs='*')
     args = parser.parse_args()
 
+    print("Load config", args.cfg)
+    cfg = importlib.import_module("CFG.%s" % args.cfg)
+
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     torch.manual_seed(args.seed)
 
@@ -291,39 +295,37 @@ def main():
 
     if not args.rep:
         if args.sbatch:
-            dataset = CombinedMMBDataset(data_set_idx, test_start, test_end)
+            dataset = CombinedMMBDataset(cfg, cfg.data_set_idx, test_start, test_end)
         else:
-            dataset = CombinedMMDataset(data_set_idx, test_start, test_end)
-            #dataset = MemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
-            #dataset = NormMemMappedDataset(datasets[data_set_idx][0], datasets[data_set_idx][1], test_start, test_end)
+            dataset = CombinedMMDataset(cfg, cfg.data_set_idx, test_start, test_end)
         test_loader = torch.utils.data.DataLoader(dataset, **kwargs)
         if args.select:
             print("Test with different micro-architecture arrangement.")
             assert "sel_output" in globals()
-        test(args, model, device, test_loader)
+        test(args, cfg, model, device, test_loader)
         if not args.no_save and torch.cuda.device_count() <= 1:
-            save_ts_model(args.checkpoints, model, device)
+            save_ts_model(cfg, args.checkpoints, model, device)
 
     if args.sim or args.rep:
         print("Run", args.sim_length, "instructions.")
         if args.rep:
-            all_rep = torch.zeros(len(sim_datasets), rep_dim)
+            all_rep = torch.zeros(len(cfg.sim_datasets), rep_dim)
             torch.set_printoptions(threshold=1000)
-        for i in range(len(sim_datasets)):
-            name = sim_datasets[i][0].replace(data_set_dir, '').replace(".in.mmap.norm", '')
-            print(sim_datasets[i][0], flush=True)
+        for i in range(len(cfg.sim_datasets)):
+            name = cfg.sim_datasets[i][0].replace(cfg.data_set_dir, '').replace(".in.mmap.norm", '')
+            print(name, flush=True)
             if args.sbatch:
-                cur_dataset = MemMappedBatchDataset(sim_datasets[i], 0, args.sim_length // args.sbatch_size + 1)
+                cur_dataset = MemMappedBatchDataset(cfg, cfg.sim_datasets[i], 0, args.sim_length // args.sbatch_size + 1)
             else:
-                cur_dataset = MemMappedDataset(sim_datasets[i][0], sim_datasets[i][1], 0, args.sim_length)
+                cur_dataset = MemMappedDataset(cfg, cfg.sim_datasets[i][0], cfg.sim_datasets[i][1], 0, args.sim_length)
             test_loader = torch.utils.data.DataLoader(cur_dataset, **kwargs)
             if args.rep:
-                all_rep[i] = get_program_representation(args, model, device, test_loader, rep_dim, name)
+                all_rep[i] = get_program_representation(args, cfg, model, device, test_loader, rep_dim, name)
             else:
-                simulate(args, model, device, test_loader, name)
+                simulate(args, cfg, model, device, test_loader, name)
             print('', flush=True)
         if args.rep:
-            name = args.checkpoints.replace("checkpoints/", "res/prep_")
+            name = args.checkpoints.replace("checkpoints/", "res/prep_%s_" % args.cfg)
             print("Save program representations to", name)
             torch.save(all_rep, name)
 
