@@ -74,14 +74,14 @@ class CombinedMMBDataset(Dataset):
         for i in range(file_num-1):
             self.starts.append(int(cfg.datasets[i][1] * (start / total_size) / mm_batch_size))
             self.mm_sizes.append(int(cfg.datasets[i][1] * frac / mm_batch_size))
-            self.mm_sets.append(MemMappedBatchDataset(cfg.datasets[i],
+            self.mm_sets.append(MemMappedBatchDataset(cfg, cfg.datasets[i],
                                 self.starts[i], self.starts[i] + self.mm_sizes[i]))
             cum_start += self.starts[i]
             cum_size += self.mm_sizes[i]
             self.bounds.append(cum_size)
         self.starts.append(start - cum_start)
         self.mm_sizes.append(self.size - cum_size)
-        self.mm_sets.append(MemMappedBatchDataset(cfg.datasets[file_num-1],
+        self.mm_sets.append(MemMappedBatchDataset(cfg, cfg.datasets[file_num-1],
                             self.starts[file_num-1], self.starts[file_num-1] + self.mm_sizes[file_num-1]))
         self.bounds.append(self.size)
 

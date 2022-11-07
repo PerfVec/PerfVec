@@ -64,14 +64,14 @@ class CombinedMMDataset(Dataset):
         for i in range(file_num-1):
             self.starts.append(int(datasets[i][2] * (start / total_size)))
             self.mm_sizes.append(int(datasets[i][2] * frac))
-            self.mm_sets.append(MemMappedDataset(datasets[i][0], datasets[i][1], datasets[i][2],
+            self.mm_sets.append(MemMappedDataset(datasets[i],
                                 self.starts[i], self.starts[i] + self.mm_sizes[i]))
             cum_start += self.starts[i]
             cum_size += self.mm_sizes[i]
             self.bounds.append(cum_size)
         self.starts.append(start - cum_start)
         self.mm_sizes.append(self.size - cum_size)
-        self.mm_sets.append(MemMappedDataset(datasets[file_num-1][0], datasets[file_num-1][1], datasets[file_num-1][2],
+        self.mm_sets.append(MemMappedDataset(datasets[file_num-1],
                             self.starts[file_num-1], self.starts[file_num-1] + self.mm_sizes[file_num-1]))
         self.bounds.append(self.size)
 
@@ -101,8 +101,8 @@ class MemMappedBatchDataset(Dataset):
         out_size = paras[2]
         self.in_arr = np.memmap(file_name, dtype=cfg.feature_format, mode='r',
                                 shape=(in_size, cfg.input_length))
-        self.out_arr = np.memmap(get_out_name(file_name), dtype=target_format, mode='r',
-                                 shape=(out_size, ori_tgt_length * cfg_num))
+        self.out_arr = np.memmap(cfg.get_out_name(file_name), dtype=cfg.target_format, mode='r',
+                                 shape=(out_size, cfg.ori_tgt_length * cfg.cfg_num))
         self.batchsize = mm_batch_size
         assert in_size >= out_size
         if end < start:
@@ -113,6 +113,10 @@ class MemMappedBatchDataset(Dataset):
             end = out_size // self.batchsize
         self.seq_length = cfg.seq_length
         self.input_length = cfg.input_length
+        if cfg.tgt_length != cfg.ori_tgt_length:
+            self.sel = cfg.sel_batch_out
+        else:
+            self.sel = None
         self.start = start
         self.size = end - start
         print("Open %s (%d %d %d)" % (file_name, start, end, self.size), flush=True)
@@ -132,8 +136,8 @@ class MemMappedBatchDataset(Dataset):
         else:
             x = np.copy(self.in_arr[idx+1-self.seq_length:idx+self.batchsize, :])
         y = np.copy(self.out_arr[idx:idx+self.batchsize, :])
-        if tgt_length != ori_tgt_length:
-            y = sel_batch_out(y)
+        if self.sel is not None:
+            y = self.sel(y)
         x = torch.from_numpy(x.astype('f'))
         y = torch.from_numpy(y.astype('f'))
         return x, y
@@ -167,14 +171,14 @@ class CombinedMMBDataset(Dataset):
         for i in range(file_num-1):
             self.starts.append(int(cfg.datasets[i][2] * (start / total_size) / mm_batch_size))
             self.mm_sizes.append(int(cfg.datasets[i][2] * frac / mm_batch_size))
-            self.mm_sets.append(MemMappedBatchDataset(cfg.datasets[i],
+            self.mm_sets.append(MemMappedBatchDataset(cfg, cfg.datasets[i],
                                 self.starts[i], self.starts[i] + self.mm_sizes[i]))
             cum_start += self.starts[i]
             cum_size += self.mm_sizes[i]
             self.bounds.append(cum_size)
         self.starts.append(start - cum_start)
         self.mm_sizes.append(self.size - cum_size)
-        self.mm_sets.append(MemMappedBatchDataset(cfg.datasets[file_num-1],
+        self.mm_sets.append(MemMappedBatchDataset(cfg, cfg.datasets[file_num-1],
                             self.starts[file_num-1], self.starts[file_num-1] + self.mm_sizes[file_num-1]))
         self.bounds.append(self.size)
 

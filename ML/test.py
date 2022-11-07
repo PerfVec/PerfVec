@@ -16,18 +16,18 @@ from .utils import profile_model, get_representation_dim
 loss_fn = nn.MSELoss()
 
 
-def analyze(args, output, target, seq=False):
-    target = target.view(-1, cfg_num, tgt_length)
-    output = output.view(-1, cfg_num, tgt_length)
+def analyze(args, cfg, output, target, seq=False):
+    target = target.view(-1, cfg.cfg_num, cfg.tgt_length)
+    output = output.view(-1, cfg.cfg_num, cfg.tgt_length)
     target = target.detach().numpy()
     output = output.detach().numpy()
     np.set_printoptions(suppress=True)
     print(output.shape)
-    for c in range(cfg_num + 1):
+    for c in range(cfg.cfg_num + 1):
         print("Config", c)
-        for i in range(tgt_length):
+        for i in range(cfg.tgt_length):
             print(i, ":")
-            if c == cfg_num:
+            if c == cfg.cfg_num:
                 if seq:
                     cur_output = output[:,:,:,i].reshape(-1)
                     cur_target = target[:,:,:,i].reshape(-1)
@@ -66,8 +66,8 @@ def analyze(args, output, target, seq=False):
 def test(args, cfg, model, device, test_loader):
     model.eval()
     total_loss = 0
-    total_output = torch.zeros(0, cfg_num * tgt_length)
-    total_target = torch.zeros(0, cfg_num * tgt_length)
+    total_output = torch.zeros(0, cfg.cfg_num * cfg.tgt_length)
+    total_target = torch.zeros(0, cfg.cfg_num * cfg.tgt_length)
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
@@ -77,7 +77,7 @@ def test(args, cfg, model, device, test_loader):
                     cur_target = target[:,i,:]
                     output = model(cur_data)
                     if args.select:
-                        output = sel_output(output)
+                        output = cfg.sel_output(output)
                     total_loss += loss_fn(output, cur_target).item()
                     if not args.no_cuda:
                         output = output.cpu()
@@ -87,7 +87,7 @@ def test(args, cfg, model, device, test_loader):
             else:
                 output = model(data)
                 if args.select:
-                    output = sel_output(output)
+                    output = cfg.sel_output(output)
                 total_loss += loss_fn(output, target).item()
                 if not args.no_cuda:
                     output = output.cpu()
@@ -98,21 +98,21 @@ def test(args, cfg, model, device, test_loader):
     if args.sbatch:
         total_loss /= args.sbatch_size
     print('Test set: Loss: {:.6f}'.format(total_loss), flush=True)
-    analyze(args, total_output, total_target)
+    analyze(args, cfg, total_output, total_target)
 
 
 def simulate(args, cfg, model, device, test_loader, name):
     model.eval()
     start_t = time.time()
     total_loss = 0
-    target_sum = torch.zeros(cfg_num * tgt_length, device=device)
-    output_sum = torch.zeros(cfg_num * tgt_length, device=device)
-    batch_target_sum = torch.zeros(cfg_num * tgt_length, device=device)
-    batch_output_sum = torch.zeros(cfg_num * tgt_length, device=device)
+    target_sum = torch.zeros(cfg.cfg_num * cfg.tgt_length, device=device)
+    output_sum = torch.zeros(cfg.cfg_num * cfg.tgt_length, device=device)
+    batch_target_sum = torch.zeros(cfg.cfg_num * cfg.tgt_length, device=device)
+    batch_output_sum = torch.zeros(cfg.cfg_num * cfg.tgt_length, device=device)
     if args.phase:
         ph_num = len(test_loader)
         print(ph_num, "phases in total.")
-        ph_res = torch.zeros(ph_num, 2, cfg_num * tgt_length, device=device)
+        ph_res = torch.zeros(ph_num, 2, cfg.cfg_num * cfg.tgt_length, device=device)
         ph_idx = 0
     with torch.no_grad():
         for data, target in test_loader:
@@ -125,14 +125,14 @@ def simulate(args, cfg, model, device, test_loader, name):
                     cur_target = target[:,i,:]
                     output = model(cur_data)
                     if args.select:
-                        output = sel_output(output)
+                        output = cfg.sel_output(output)
                     batch_target_sum += torch.sum(cur_target, dim=0)
                     batch_output_sum += torch.sum(output, dim=0)
                     total_loss += loss_fn(output, cur_target).item()
             else:
                 output = model(data)
                 if args.select:
-                    output = sel_output(output)
+                    output = cfg.sel_output(output)
                 batch_target_sum += torch.sum(target, dim=0)
                 batch_output_sum += torch.sum(output, dim=0)
                 total_loss += loss_fn(output, target).item()
@@ -143,8 +143,8 @@ def simulate(args, cfg, model, device, test_loader, name):
                 ph_res[ph_idx, 1] = batch_output_sum
                 ph_idx += 1
     end_t = time.time()
-    target_sum = target_sum.view(cfg_num, tgt_length)
-    output_sum = output_sum.view(cfg_num, tgt_length)
+    target_sum = target_sum.view(cfg.cfg_num, cfg.tgt_length)
+    output_sum = output_sum.view(cfg.cfg_num, cfg.tgt_length)
     error = (output_sum - target_sum) / target_sum
     max_sum = torch.max(target_sum, output_sum)
     norm_error = (output_sum - target_sum) / max_sum
@@ -156,7 +156,7 @@ def simulate(args, cfg, model, device, test_loader, name):
     if args.uarch:
         print("Mean unseen error:", torch.mean(torch.abs(error[1:]), dim=0))
         print("Mean normalized unseen error:", torch.mean(torch.abs(norm_error[1:]), dim=0))
-    if tgt_length >= 3:
+    if cfg.tgt_length >= 3:
         averaged_sum = torch.mean(output_sum[:, 0:3], dim=1)
         averaged_error = (averaged_sum  - target_sum[:, 2]) / target_sum[:, 2]
         norm_averaged_error = (averaged_sum  - target_sum[:, 2]) / max_sum[:, 2]
@@ -295,13 +295,13 @@ def main():
 
     if not args.rep:
         if args.sbatch:
-            dataset = CombinedMMBDataset(cfg, cfg.data_set_idx, test_start, test_end)
+            dataset = CombinedMMBDataset(cfg, cfg.data_set_idx, cfg.test_start, cfg.test_end)
         else:
-            dataset = CombinedMMDataset(cfg, cfg.data_set_idx, test_start, test_end)
+            dataset = CombinedMMDataset(cfg, cfg.data_set_idx, cfg.test_start, cfg.test_end)
         test_loader = torch.utils.data.DataLoader(dataset, **kwargs)
         if args.select:
             print("Test with different micro-architecture arrangement.")
-            assert "sel_output" in globals()
+            assert hasattr(cfg, 'sel_output')
         test(args, cfg, model, device, test_loader)
         if not args.no_save and torch.cuda.device_count() <= 1:
             save_ts_model(cfg, args.checkpoints, model, device)
