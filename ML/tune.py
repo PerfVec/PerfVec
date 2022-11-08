@@ -3,6 +3,7 @@ import argparse
 import os
 import sys
 import time
+import importlib
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,7 +16,6 @@ from torch.optim.lr_scheduler import StepLR
 from ML.custom_data import *
 from ML.utils import profile_model, generate_model_name, get_representation_dim
 from ML.models import *
-from CFG import *
 
 
 loss_fn = nn.MSELoss()
@@ -65,7 +65,7 @@ def train_mul(args, models, device, train_loader, epoch, rank):
             epoch, ms.idx, rank, ms.total_loss, end_t - start_t), flush=True)
 
 
-def train_sbatch_mul(args, models, device, train_loader, epoch, rank):
+def train_sbatch_mul(args, cfg, models, device, train_loader, epoch, rank):
     for ms in models:
         ms.model.train()
         ms.total_loss = 0
@@ -74,7 +74,7 @@ def train_sbatch_mul(args, models, device, train_loader, epoch, rank):
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         for i in range(args.sbatch_size):
-            cur_data = data[:,i:i+seq_length,:]
+            cur_data = data[:,i:i+cfg.seq_length,:]
             cur_target = target[:,i,:]
             for ms in models:
                 ms.optimizer.zero_grad()
@@ -118,7 +118,7 @@ def test_mul(args, models, device, test_loader, rank):
             ms.idx, rank, ms.total_loss), flush=True)
 
 
-def test_sbatch_mul(args, models, device, test_loader, rank):
+def test_sbatch_mul(args, cfg, models, device, test_loader, rank):
     for ms in models:
         ms.model.eval()
         ms.total_loss = 0
@@ -126,7 +126,7 @@ def test_sbatch_mul(args, models, device, test_loader, rank):
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             for i in range(args.sbatch_size):
-                cur_data = data[:,i:i+seq_length,:]
+                cur_data = data[:,i:i+cfg.seq_length,:]
                 cur_target = target[:,i,:]
                 for ms in models:
                     output = ms.model(cur_data)
@@ -139,15 +139,15 @@ def test_sbatch_mul(args, models, device, test_loader, rank):
             ms.idx, rank, ms.total_loss), flush=True)
 
 
-def save_checkpoint(name, model, optimizer, epoch, best_loss, lr, best=False):
+def save_checkpoint(name, model, optimizer, epoch, best_loss, cfg, lr, best=False):
     if lr != 0:
         lr_name = '_lr' + str(lr)
     else:
         lr_name = ''
     if best:
-        name = 'checkpoints/' + generate_model_name(name) + lr_name + '_best.pt'
+        name = 'checkpoints/' + generate_model_name(name) + '_' + cfg + lr_name + '_best.pt'
     else:
-        name = 'checkpoints/' + generate_model_name(name, epoch) + lr_name + '.pt'
+        name = 'checkpoints/' + generate_model_name(name, epoch) + '_' + cfg + lr_name + '.pt'
     saved_dict = {'epoch': epoch,
                   'best_loss': best_loss,
                   'optimizer_state_dict': optimizer.state_dict()}
@@ -168,6 +168,10 @@ def load_checkpoint(name, model):
 
 
 def main_rank(rank, args):
+    if rank == 0:
+        print("Load config", args.cfg, flush=True)
+    cfg = importlib.import_module("CFG.%s" % args.cfg)
+
     if args.distributed:
         # create default process group
         global_rank = args.node_rank * args.gpus + rank
@@ -177,11 +181,11 @@ def main_rank(rank, args):
     torch.manual_seed(args.seed)
 
     if args.sbatch:
-        dataset1 = CombinedMMBDataset(data_set_idx, 0, args.train_size)
-        dataset2 = CombinedMMBDataset(data_set_idx, valid_start, valid_end)
+        dataset1 = CombinedMMBDataset(cfg, cfg.data_set_idx, 0, args.train_size)
+        dataset2 = CombinedMMBDataset(cfg, cfg.data_set_idx, cfg.valid_start, cfg.valid_end)
     else:
-        dataset1 = CombinedMMDataset(data_set_idx, 0, args.train_size)
-        dataset2 = CombinedMMDataset(data_set_idx, valid_start, valid_end)
+        dataset1 = CombinedMMDataset(cfg, cfg.data_set_idx, 0, args.train_size)
+        dataset2 = CombinedMMDataset(cfg, cfg.data_set_idx, cfg.valid_start, cfg.valid_end)
     kwargs = {'batch_size': args.batch_size}
     if use_cuda:
         if args.distributed:
@@ -215,8 +219,9 @@ def main_rank(rank, args):
         for param in model.parameters():
             param.requires_grad = False
     # Replace the linear layer.
-    model.linear = nn.Linear(rep_dim, cfg_num * tgt_length, bias=args.bias)
-    profile_model(model)
+    model.linear = nn.Linear(rep_dim, cfg.cfg_num * cfg.tgt_length, bias=args.bias)
+    if rank == 0:
+        profile_model(model)
     device = torch.device("cuda" if use_cuda else "cpu")
     if args.distributed:
         device = rank
@@ -255,13 +260,13 @@ def main_rank(rank, args):
             dist.barrier()
             train_sampler.set_epoch(epoch - 1)
         if args.sbatch:
-            train_sbatch_mul(args, models, device, train_loader, epoch, rank)
+            train_sbatch_mul(args, cfg, models, device, train_loader, epoch, rank)
         else:
             train_mul(args, models, device, train_loader, epoch, rank)
         if args.distributed:
             test_sampler.set_epoch(epoch - 1)
         if args.sbatch:
-            test_sbatch_mul(args, models, device, test_loader, rank)
+            test_sbatch_mul(args, cfg, models, device, test_loader, rank)
         else:
             test_mul(args, models, device, test_loader, rank)
         for ms in models:
@@ -274,9 +279,9 @@ def main_rank(rank, args):
                     print("Find new minimal loss", ms.cur_loss, "to replace", ms.min_loss, "of model", ms.idx)
                     ms.min_loss = ms.cur_loss
                     if not args.no_save_model:
-                        save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args.lr, True)
+                        save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args.cfg, args.lr, True)
                 if (not args.no_save_model) and epoch % args.save_interval == 0:
-                    save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args.lr)
+                    save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args.cfg, args.lr)
             if args.lr_step > 0:
                 ms.scheduler.step()
 
@@ -287,7 +292,8 @@ def main_rank(rank, args):
 
 def main():
     # Training settings
-    parser = argparse.ArgumentParser(description='Trace2Vec Training')
+    parser = argparse.ArgumentParser(description='Trace2Vec Tuning')
+    parser.add_argument('--cfg', required=True, help='config file')
     parser.add_argument('--uarch', action='store_true', default=False,
                         help='learn micro-architecture representations only')
     parser.add_argument('--bias', action='store_true', default=False,
@@ -331,6 +337,7 @@ def main():
     parser.add_argument('--checkpoints', required=True)
     parser.add_argument('models', nargs='*')
     args = parser.parse_args()
+
     if args.distributed:
         args.world_size = args.gpus * args.nodes
         os.environ['MASTER_ADDR'] = 'localhost'
