@@ -74,6 +74,42 @@ class InsLSTMRep(SeqLSTM):
     return x, rep
 
 
+class InsLSTMDSE(SeqLSTM):
+  def __init__(self, nhidden, nlayers, narchs=1, nembed=0, gru=False, bi=False, norm=False, bias=True):
+    assert not bias
+    super().__init__(nhidden, nlayers, narchs, nembed, gru, bi, norm, bias)
+    self.nhidden = nhidden
+    if bi:
+      self.nhidden *= 2
+
+  def init_paras(self, nparas=2, nparahidden=16):
+    assert nparas == 2
+    self.uarch_net = nn.Sequential(
+      nn.Linear(nparas, nparahidden),
+      nn.ReLU(),
+      nn.Linear(nparahidden, self.nhidden * tgt_length),
+    )
+    narchs = 18
+    uarch_paras = torch.tensor([[1, 1], [1, 2], [1, 3],
+                                [6, 4], [6, 5], [6, 6],
+                                [3, 3], [3, 4], [3, 2],
+                                [4, 3], [4, 4], [4, 2],
+                                [5, 3], [5, 4], [5, 5],
+                                [2, 3], [2, 4], [2, 2]],
+                                dtype=torch.float)
+    self.uarch_paras = nn.Parameter(uarch_paras)
+    self.uarch_paras.requires_grad = False
+    self.output_num = narchs * tgt_length
+    print("Paras:", self.uarch_paras)
+
+  def forward(self, x):
+    rep = super().extract_representation(x)
+    rep = rep[:, -1, :]
+    uarch_rep = self.uarch_net(self.uarch_paras).view(self.output_num, -1)
+    x = F.linear(rep, uarch_rep)
+    return x
+
+
 class SeqEmLSTM(SeqLSTM):
   def __init__(self, nhidden, nlayers, narchs, nembed=0, gru=False, bi=False, norm=False):
     super().__init__(nhidden, nlayers, 1, nembed, gru, bi, norm)

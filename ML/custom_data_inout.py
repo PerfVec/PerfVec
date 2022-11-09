@@ -119,7 +119,7 @@ class MemMappedBatchDataset(Dataset):
             self.sel = None
         self.start = start
         self.size = end - start
-        print("Open %s (%d %d %d)" % (file_name, start, end, self.size), flush=True)
+        print("Open %s (%d %d %d)" % (cfg.get_out_name(file_name), start, end, self.size), flush=True)
 
     def __len__(self):
         return self.size

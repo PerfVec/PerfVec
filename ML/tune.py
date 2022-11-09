@@ -215,11 +215,18 @@ def main_rank(rank, args):
     model = eval(args.models[0])
     rep_dim = get_representation_dim(model)
     load_checkpoint(args.checkpoints, model)
-    if args.uarch:
+    if args.uarch_net:
         for param in model.parameters():
             param.requires_grad = False
-    # Replace the linear layer.
-    model.linear = nn.Linear(rep_dim, cfg.cfg_num * cfg.tgt_length, bias=args.bias)
+        model.init_paras()
+        for param in model.uarch_net.parameters():
+            param.requires_grad = True
+    else:
+        if args.uarch:
+            for param in model.parameters():
+                param.requires_grad = False
+        # Replace the linear layer.
+        model.linear = nn.Linear(rep_dim, cfg.cfg_num * cfg.tgt_length, bias=args.bias)
     if rank == 0:
         profile_model(model)
     device = torch.device("cuda" if use_cuda else "cpu")
@@ -239,16 +246,24 @@ def main_rank(rank, args):
     if args.wd != 0:
         wd_arg = {'weight_decay': args.wd}
         opt_args.update(wd_arg)
-    if not args.uarch:
-        optimizer = optim.Adam(model.parameters(), **opt_args)
-    if args.distributed or torch.cuda.device_count() > 1:
-        optimizer = optim.Adam(model.module.linear.parameters(), **opt_args)
+    if args.uarch_net:
+        if args.distributed or torch.cuda.device_count() > 1:
+            optimizer = optim.Adam(model.module.uarch_net.parameters(), **opt_args)
+        else:
+            optimizer = optim.Adam(model.uarch_net.parameters(), **opt_args)
+    elif args.uarch:
+        if args.distributed or torch.cuda.device_count() > 1:
+            optimizer = optim.Adam(model.module.linear.parameters(), **opt_args)
+        else:
+            optimizer = optim.Adam(model.linear.parameters(), **opt_args)
     else:
-        optimizer = optim.Adam(model.linear.parameters(), **opt_args)
+        optimizer = optim.Adam(model.parameters(), **opt_args)
     scheduler = None
     if args.lr_step > 0:
         scheduler = StepLR(optimizer, step_size=args.lr_step, verbose=True)
-    if args.uarch:
+    if args.uarch_net:
+        name = "unet_" + args.models[0]
+    elif args.uarch:
         name = "uarch_" + args.models[0]
     else:
         name = "ft_" + args.models[0]
@@ -296,6 +311,8 @@ def main():
     parser.add_argument('--cfg', required=True, help='config file')
     parser.add_argument('--uarch', action='store_true', default=False,
                         help='learn micro-architecture representations only')
+    parser.add_argument('--uarch-net', action='store_true', default=False,
+                        help='learn the micro-architecture representation model only')
     parser.add_argument('--bias', action='store_true', default=False,
                         help='use bias for the linear layer')
     parser.add_argument('--batch-size', type=int, default=4096, metavar='N',
