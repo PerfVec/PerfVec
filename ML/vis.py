@@ -2,10 +2,12 @@ import argparse
 import os
 import sys
 import time
+import importlib
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
@@ -15,38 +17,38 @@ from sklearn.manifold import TSNE
 from .custom_data import *
 from .utils import generate_model_name
 from .models import *
-from CFG import *
 from ML.test import load_checkpoint
 
 
-def vis():
-    # Training settings
-    parser = argparse.ArgumentParser(description='SIMNET Testing')
-    parser.add_argument('--batch-size', type=int, default=4096, metavar='N',
-                        help='input batch size (default: 4096)')
-    parser.add_argument('--no-cuda', action='store_true', default=False,
-                        help='disables CUDA')
-    parser.add_argument('--sbatch', action='store_true', default=False,
-                        help='uses small batch training')
-    parser.add_argument('--sbatch-size', type=int, default=512, metavar='N',
-                        help='small batch size (default: 512)')
-    parser.add_argument('--seed', type=int, default=1, metavar='S',
-                        help='random seed (default: 1)')
-    parser.add_argument('--tsne', action='store_true', default=False,
-                        help='uses t-SNE')
-    parser.add_argument('--dim', type=int, default=2, metavar='N',
-                        help='projection dimension')
-    parser.add_argument('--prog', action='store_true', default=False,
-                        help='visualizes program representations')
-    parser.add_argument('--checkpoints', required=True)
-    parser.add_argument('models', nargs='*')
-    args = parser.parse_args()
+def norm(rep, opt_lvl):
+    # Normalize based on the number of instructions.
+    cfg = importlib.import_module("CFG.com_o%d_1022" % opt_lvl)
+    for i in range(len(cfg.sim_datasets)):
+        rep[i] /= cfg.sim_datasets[i][1]
+    return rep
 
+
+def vis(args):
     if args.prog:
         assert "res/" in args.checkpoints
         rep = torch.load(args.checkpoints, map_location=torch.device('cpu'))
         rep = rep.detach().numpy()
         print("Program representations' shape is", rep.shape)
+    elif args.opt:
+        assert "res/" in args.checkpoints
+        rep = torch.load(args.checkpoints, map_location=torch.device('cpu'))
+        #rep = norm(rep, 0)
+        rep = rep.view(rep.shape[0], 1, rep.shape[1])
+        for i in range(1, 4):
+            file_name = args.checkpoints.replace("_o0_", "_o%d_" % i)
+            print("Open", file_name)
+            cur_rep = torch.load(file_name, map_location=torch.device('cpu'))
+            #cur_rep = norm(cur_rep, i)
+            cur_rep = cur_rep.view(cur_rep.shape[0], 1, cur_rep.shape[1])
+            rep = torch.cat((rep, cur_rep), dim=1)
+        rep = rep.detach().numpy()
+        print("Input shape is", rep.shape)
+        rep = rep.reshape((-1, rep.shape[2]))
     else:
         assert len(args.models) == 1
         model = eval(args.models[0])
@@ -67,17 +69,21 @@ def vis():
         print("PCA:", pca.explained_variance_ratio_)
 
     # Visualize representations.
+    mpl.rcParams['text.usetex'] = True
+    font = {'size' : 18}
+    plt.rc('font', **font)
+    fig_size = 8
     if args.dim == 3:
-        fig = plt.figure(figsize=(8,8))
+        fig = plt.figure(figsize=(fig_size, fig_size))
         ax = fig.add_subplot(111, projection='3d')
     elif args.dim == 2:
-        fig, ax = plt.subplots(figsize=(8,8))
+        fig, ax = plt.subplots(figsize=(fig_size, fig_size))
     else:
         print("Do not support the dimension of", args.dim)
         sys.exit()
-    all_idx = np.arange(0, num, dtype=int)
 
     if args.prog:
+        from CFG import sim_datasets, data_set_dir
         assert num == len(sim_datasets)
         cmap = cm.get_cmap('tab20')
         for idx in range(num):
@@ -87,10 +93,46 @@ def vis():
                 ax.scatter(proj[idx,0], proj[idx,1], c=np.array(cmap(idx)).reshape(1,4), label=name, alpha=0.5)
             elif args.dim == 3:
                 ax.scatter(proj[idx,0], proj[idx,1], proj[idx,2], c=np.array(cmap(idx)).reshape(1,4), label=name, alpha=0.5)
-        ax.legend(fontsize='small', markerscale=2)
+        ax.legend(markerscale=2)
         file_name = args.checkpoints.replace("res/", "fig/")
+    elif args.opt:
+        from CFG.com_o0_1022 import sim_datasets, data_set_dir
+        assert num == 4 * len(sim_datasets)
+        proj = proj.reshape((len(sim_datasets), 4, args.dim))
+        cmap = cm.get_cmap('tab10')
+        markers = ["o", "^", "s", "d"]
+        #mask = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+        mask = [2, 3, 4, 7, 8, 9, 11]
+        #mask = [0, 1, 4, 5, 6, 7, 9, 10, 12, 13, 14]
+        #for idx in range(len(sim_datasets)):
+        cur_idx = 0
+        for idx in mask:
+            name = sim_datasets[idx][0]
+            name = name.replace(data_set_dir, "").replace(".in.mmap.norm", "").replace("_r", "")
+            for i in range(4):
+                cidx = 4 * idx + i
+                if args.dim == 2:
+                    if cur_idx == 0 or i == 0:
+                        if cur_idx == 0:
+                            label = name + "_O%d" % i
+                        else:
+                            label = name
+                        ax.scatter(proj[idx,i,0], proj[idx,i,1], c=np.array(cmap(cur_idx)).reshape(1,4), label=label, alpha=0.5, marker=markers[i], s=50)
+                    else:
+                        ax.scatter(proj[idx,i,0], proj[idx,i,1], c=np.array(cmap(cur_idx)).reshape(1,4), alpha=0.5, marker=markers[i], s=50)
+                    if i < 3:
+                        x = [proj[idx,i,0], proj[idx,i+1,0]]
+                        y = [proj[idx,i,1], proj[idx,i+1,1]]
+                        plt.plot(x, y, c=np.array(cmap(cur_idx)).reshape(1,4), alpha=0.5)
+                elif args.dim == 3:
+                    label = name + "_O%d" % i
+                    ax.scatter(proj[idx,i,0], proj[idx,i,1], proj[idx,i,2], c=np.array(cmap(cur_idx)).reshape(1,4), label=label, alpha=0.5, marker=markers[i])
+            cur_idx += 1
+        ax.legend(markerscale=2, shadow=False, borderpad=0.2, borderaxespad=0.2)
+        file_name = args.checkpoints.replace("res/", "fig/opt_")
     else:
         cmap = cm.get_cmap('tab10')
+        all_idx = np.arange(0, num, dtype=int)
         for label in range(2):
             if label == 0:
                 idx = all_idx < 60
@@ -110,7 +152,7 @@ def vis():
         #        ax.scatter(proj[idx,0], proj[idx,1], c=np.array(cmap(label)).reshape(1,4), label=label, alpha=0.5)
         #    elif args.dim == 3:
         #        ax.scatter(proj[idx,0], proj[idx,1], proj[idx,2], c=np.array(cmap(label)).reshape(1,4), label=label, alpha=0.5)
-        ax.legend(fontsize='large', markerscale=2)
+        ax.legend(markerscale=2)
         file_name = args.checkpoints.replace("checkpoints/", "fig/urep_")
 
     file_name = file_name.replace(".pt", "")
@@ -126,4 +168,19 @@ def vis():
 
 
 if __name__ == '__main__':
-    vis()
+    # Settings
+    parser = argparse.ArgumentParser(description='Trace2Vec Visualization')
+    parser.add_argument('--prog', action='store_true', default=False,
+                        help='visualizes program representations')
+    parser.add_argument('--opt', action='store_true', default=False,
+                        help='visualizes program representations under optimization levels')
+    parser.add_argument('--tsne', action='store_true', default=False,
+                        help='uses t-SNE')
+    parser.add_argument('--dim', type=int, default=2, metavar='N',
+                        help='projection dimension')
+    parser.add_argument('--checkpoints', required=True)
+    parser.add_argument('models', nargs='*')
+    args = parser.parse_args()
+    assert not (args.prog and args.opt)
+
+    vis(args)
