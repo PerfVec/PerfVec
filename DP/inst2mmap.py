@@ -17,7 +17,7 @@ if args.feature:
   inst_length = input_length
   data_item_format = feature_format
 elif args.target:
-  inst_length = cfg_num * tgt_length
+  inst_length = cfg_num * ori_tgt_length
   data_item_format = target_format
 else:
   inst_length = input_length + tgt_length
