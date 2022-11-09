@@ -26,6 +26,7 @@ datasets = [
 
 sim_datasets = [
   datasets[1],
+  datasets[2],
   datasets[0],
   datasets[5],
   datasets[3],
@@ -33,9 +34,11 @@ sim_datasets = [
   datasets[8],
   datasets[9],
   datasets[10],
+  datasets[11],
   datasets[13],
   datasets[14],
-  datasets[15]
+  datasets[15],
+  datasets[16]
 ]
 
 def get_out_name(name):
@@ -50,6 +53,8 @@ if data_set_idx == 17:
   testbatchsize = 1024
   validbatchnum = 2304000
   validbatchsize = 128000
+  #validbatchsize = 12800
+  #validbatchsize = 64000
 elif data_set_idx == 7:
   # total batch number is 4,449,307,282 / 4096 = 1,086,256.66
   # training set size = 921600 * 4096 = 3774873600
