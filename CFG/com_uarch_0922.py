@@ -4,6 +4,7 @@ import numpy as np
 data_set_dir = 'Data4/'
 #data_set_idx = 17
 data_set_idx = 7
+#data_set_idx = 10
 datasets = [
   (data_set_dir + '508.namd_r.in.mmap.norm', 1105247403, 1105247398),
   (data_set_dir + '500.perlbench_r.in.mmap.norm', 1184866587, 1184866587),
@@ -62,6 +63,13 @@ elif data_set_idx == 7:
   testbatchsize = 1024
   validbatchnum = 921600
   validbatchsize = 51200
+elif data_set_idx == 10:
+  # total batch number is 6,640,123,936 / 4096 = 1,621,124.01
+  # training set size = 1440000 * 4096 = 5898240000
+  testbatchnum = 1520000
+  testbatchsize = 1024
+  validbatchnum = 1440000
+  validbatchsize = 80000
 
 ori_batch_size = 4096
 test_start = testbatchnum * ori_batch_size
