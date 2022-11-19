@@ -2,7 +2,8 @@ import numpy as np
 
 # Data set configuration.
 data_set_dir = 'Data4/'
-data_set_idx = 8
+#data_set_idx = 8
+data_set_idx = 1
 datasets = [
   (data_set_dir + '507.cactuBSSN_r.in.mmap.norm', 1035397081, 16511420),
   (data_set_dir + '508.namd_r.in.mmap.norm', 1105247403, 1105245194),
@@ -54,6 +55,14 @@ elif data_set_idx == 4:
   testbatchsize = 1024
   validbatchnum = 524288
   validbatchsize = 25600
+elif data_set_idx == 1:
+  datasets = datasets[4:5]
+  # total batch number is 1103901340 / 4096 = 269,507.16
+  # training set size = 243000 * 4096 = 995328000
+  testbatchnum = 256500
+  testbatchsize = 1024
+  validbatchnum = 243000
+  validbatchsize = 13500
 
 ori_batch_size = 4096
 test_start = testbatchnum * ori_batch_size
