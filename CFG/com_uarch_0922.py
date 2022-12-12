@@ -31,16 +31,20 @@ sim_datasets = [
   datasets[0],
   datasets[5],
   datasets[3],
+  datasets[4],
+  datasets[6],
   datasets[7],
   datasets[8],
   datasets[9],
   datasets[10],
   datasets[11],
+  datasets[12],
   datasets[13],
   datasets[14],
   datasets[15],
   datasets[16]
 ]
+
 
 def get_out_name(name):
   return name.replace("in.mmap.norm", "out.mmap").replace(data_set_dir, data_set_dir + "uarch/")
@@ -64,6 +68,7 @@ elif data_set_idx == 7:
   validbatchnum = 921600
   validbatchsize = 51200
 elif data_set_idx == 10:
+  datasets = datasets[7:17]
   # total batch number is 6,640,123,936 / 4096 = 1,621,124.01
   # training set size = 1440000 * 4096 = 5898240000
   testbatchnum = 1520000
