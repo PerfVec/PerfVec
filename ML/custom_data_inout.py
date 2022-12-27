@@ -95,22 +95,28 @@ mm_batch_size = 512
 class MemMappedBatchDataset(Dataset):
 
     def __init__(self, cfg, paras, start, end):
-        assert len(paras) == 3
         file_name = paras[0]
         in_size = paras[1]
-        out_size = paras[2]
+        if len(paras) == 4:
+            out_size = paras[3]
+            out_use_size = paras[2]
+            assert out_use_size <= out_size
+        else:
+            assert len(paras) == 3
+            out_size = paras[2]
+            out_use_size = out_size
+        assert in_size >= out_size
         self.in_arr = np.memmap(file_name, dtype=cfg.feature_format, mode='r',
                                 shape=(in_size, cfg.input_length))
         self.out_arr = np.memmap(cfg.get_out_name(file_name), dtype=cfg.target_format, mode='r',
                                  shape=(out_size, cfg.ori_tgt_length * cfg.cfg_num))
         self.batchsize = mm_batch_size
-        assert in_size >= out_size
         if end < start:
             raise AttributeError("End is illegal.")
-        elif end * self.batchsize > out_size:
-            print("Use the maximum size of", out_size // self.batchsize,
+        elif end * self.batchsize > out_use_size:
+            print("Use the maximum size of", out_use_size // self.batchsize,
                   "instead of", end)
-            end = out_size // self.batchsize
+            end = out_use_size // self.batchsize
         self.seq_length = cfg.seq_length
         self.input_length = cfg.input_length
         if cfg.tgt_length != cfg.ori_tgt_length:
