@@ -102,6 +102,20 @@ class InsLSTMDSE(SeqLSTM):
     self.output_num = narchs * tgt_length
     print("Paras:", self.uarch_paras)
 
+  def setup_test(self):
+    narchs = 36
+    uarch_paras = torch.tensor([[1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6],
+                                [6, 4], [6, 5], [6, 6], [6, 1], [6, 2], [6, 3],
+                                [3, 3], [3, 4], [3, 2], [3, 1], [3, 5], [3, 6],
+                                [4, 3], [4, 4], [4, 2], [4, 1], [4, 5], [4, 6],
+                                [5, 3], [5, 4], [5, 5], [5, 1], [5, 2], [5, 6],
+                                [2, 3], [2, 4], [2, 2], [2, 1], [2, 5], [2, 6]],
+                                dtype=torch.float)
+    self.uarch_paras = nn.Parameter(uarch_paras)
+    self.uarch_paras.requires_grad = False
+    self.output_num = narchs * tgt_length
+    print("Test paras:", self.uarch_paras)
+
   def forward(self, x):
     rep = super().extract_representation(x)
     rep = rep[:, -1, :]

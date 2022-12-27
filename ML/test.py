@@ -16,18 +16,18 @@ from .utils import profile_model, get_representation_dim
 loss_fn = nn.MSELoss()
 
 
-def analyze(args, cfg, output, target, seq=False):
-    target = target.view(-1, cfg.cfg_num, cfg.tgt_length)
-    output = output.view(-1, cfg.cfg_num, cfg.tgt_length)
+def analyze(args, cfg, output, target, cfg_num, seq=False):
+    target = target.view(-1, cfg_num, cfg.tgt_length)
+    output = output.view(-1, cfg_num, cfg.tgt_length)
     target = target.detach().numpy()
     output = output.detach().numpy()
     np.set_printoptions(suppress=True)
     print(output.shape)
-    for c in range(cfg.cfg_num + 1):
+    for c in range(cfg_num + 1):
         print("Config", c)
         for i in range(cfg.tgt_length):
             print(i, ":")
-            if c == cfg.cfg_num:
+            if c == cfg_num:
                 if seq:
                     cur_output = output[:,:,:,i].reshape(-1)
                     cur_target = target[:,:,:,i].reshape(-1)
@@ -63,11 +63,11 @@ def analyze(args, cfg, output, target, seq=False):
             print(his[0] / errs.size)
 
 
-def test(args, cfg, model, device, test_loader):
+def test(args, cfg, model, device, test_loader, cfg_num):
     model.eval()
     total_loss = 0
-    total_output = torch.zeros(0, cfg.cfg_num * cfg.tgt_length)
-    total_target = torch.zeros(0, cfg.cfg_num * cfg.tgt_length)
+    total_output = torch.zeros(0, cfg_num * cfg.tgt_length)
+    total_target = torch.zeros(0, cfg_num * cfg.tgt_length)
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
@@ -98,21 +98,21 @@ def test(args, cfg, model, device, test_loader):
     if args.sbatch:
         total_loss /= args.sbatch_size
     print('Test set: Loss: {:.6f}'.format(total_loss), flush=True)
-    analyze(args, cfg, total_output, total_target)
+    analyze(args, cfg, total_output, total_target, cfg_num)
 
 
-def simulate(args, cfg, model, device, test_loader, name):
+def simulate(args, cfg, model, device, test_loader, name, cfg_num):
     model.eval()
     start_t = time.time()
     total_loss = 0
-    target_sum = torch.zeros(cfg.cfg_num * cfg.tgt_length, device=device)
-    output_sum = torch.zeros(cfg.cfg_num * cfg.tgt_length, device=device)
-    batch_target_sum = torch.zeros(cfg.cfg_num * cfg.tgt_length, device=device)
-    batch_output_sum = torch.zeros(cfg.cfg_num * cfg.tgt_length, device=device)
+    target_sum = torch.zeros(cfg_num * cfg.tgt_length, device=device)
+    output_sum = torch.zeros(cfg_num * cfg.tgt_length, device=device)
+    batch_target_sum = torch.zeros(cfg_num * cfg.tgt_length, device=device)
+    batch_output_sum = torch.zeros(cfg_num * cfg.tgt_length, device=device)
     if args.phase:
         ph_num = len(test_loader)
         print(ph_num, "phases in total.")
-        ph_res = torch.zeros(ph_num, 2, cfg.cfg_num * cfg.tgt_length, device=device)
+        ph_res = torch.zeros(ph_num, 2, cfg_num * cfg.tgt_length, device=device)
         ph_idx = 0
     with torch.no_grad():
         for data, target in test_loader:
@@ -143,8 +143,8 @@ def simulate(args, cfg, model, device, test_loader, name):
                 ph_res[ph_idx, 1] = batch_output_sum
                 ph_idx += 1
     end_t = time.time()
-    target_sum = target_sum.view(cfg.cfg_num, cfg.tgt_length)
-    output_sum = output_sum.view(cfg.cfg_num, cfg.tgt_length)
+    target_sum = target_sum.view(cfg_num, cfg.tgt_length)
+    output_sum = output_sum.view(cfg_num, cfg.tgt_length)
     error = (output_sum - target_sum) / target_sum
     max_sum = torch.max(target_sum, output_sum)
     norm_error = (output_sum - target_sum) / max_sum
@@ -167,6 +167,10 @@ def simulate(args, cfg, model, device, test_loader, name):
         if args.uarch:
             print("Mean averaged unseen error:", torch.mean(torch.abs(averaged_error[1:]), dim=0).item())
             print("Mean normalized averaged unseen error:", torch.mean(torch.abs(norm_averaged_error[1:]), dim=0).item())
+    if args.uarch_net_unseen:
+        file_name = args.checkpoints.replace("checkpoints/", "res/sim_%s_%s_" % (args.cfg, name))
+        print("Save simulation results to", file_name)
+        torch.save(output_sum.cpu(), file_name)
     if args.phase:
         assert ph_idx == ph_num
         file_name = args.checkpoints.replace("checkpoints/", "res/ph_%s_%s_" % (args.cfg, name))
@@ -244,6 +248,12 @@ def main():
                         help='simulates traces')
     parser.add_argument('--rep', action='store_true', default=False,
                         help='extracts program representations')
+    parser.add_argument('--uarch', action='store_true', default=False,
+                        help='tests unseen micro-architectures')
+    parser.add_argument('--uarch-net', action='store_true', default=False,
+                        help='tests micro-architecture nets')
+    parser.add_argument('--uarch-net-unseen', action='store_true', default=False,
+                        help='tests micro-architecture nets on unseen programs')
     parser.add_argument('--phase', action='store_true', default=False,
                         help='phase simulation')
     parser.add_argument('--sim-length', type=int, default=100000000, metavar='N',
@@ -262,8 +272,6 @@ def main():
                         help='random seed (default: 1)')
     parser.add_argument('--select', action='store_true', default=False,
                         help='test set is a subset of training set')
-    parser.add_argument('--uarch', action='store_true', default=False,
-                        help='tests unseen micro-architectures')
     parser.add_argument('--checkpoints', required=True)
     parser.add_argument('models', nargs='*')
     args = parser.parse_args()
@@ -277,7 +285,14 @@ def main():
     assert len(args.models) == 1
     model = eval(args.models[0])
     rep_dim = get_representation_dim(model)
+    cfg_num = cfg.cfg_num
+    if args.uarch_net or args.uarch_net_unseen:
+        model.init_paras()
+    if args.uarch_net:
+        cfg_num -= 1
     load_checkpoint(args.checkpoints, model)
+    if args.uarch_net_unseen:
+        model.setup_test()
     #profile_model(model)
     device = torch.device("cuda" if use_cuda else "cpu")
     if torch.cuda.device_count() > 1:
@@ -293,7 +308,7 @@ def main():
                        'pin_memory': True}
         kwargs.update(cuda_kwargs)
 
-    if not args.rep:
+    if not args.rep and not args.uarch_net_unseen:
         if args.sbatch:
             dataset = CombinedMMBDataset(cfg, cfg.data_set_idx, cfg.test_start, cfg.test_end)
         else:
@@ -302,7 +317,7 @@ def main():
         if args.select:
             print("Test with different micro-architecture arrangement.")
             assert hasattr(cfg, 'sel_output')
-        test(args, cfg, model, device, test_loader)
+        test(args, cfg, model, device, test_loader, cfg_num)
         if not args.no_save and torch.cuda.device_count() <= 1:
             save_ts_model(cfg, args.checkpoints, model, device)
 
@@ -322,7 +337,7 @@ def main():
             if args.rep:
                 all_rep[i] = get_program_representation(args, cfg, model, device, test_loader, rep_dim, name)
             else:
-                simulate(args, cfg, model, device, test_loader, name)
+                simulate(args, cfg, model, device, test_loader, name, cfg_num)
             print('', flush=True)
         if args.rep:
             name = args.checkpoints.replace("checkpoints/", "res/prep_%s_" % args.cfg)
