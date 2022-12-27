@@ -31,6 +31,7 @@ sim_datasets = [
   datasets[4],
   datasets[5],
   datasets[6],
+  datasets[7],
   datasets[2],
   datasets[3],
   datasets[8],
