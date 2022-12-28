@@ -165,7 +165,7 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace, bool isSingleTrace) {
          (isSquashAfter == 0 || isSquashAfter == 1) &&
          (isSerializeAfter == 0 || isSerializeAfter == 1) &&
          (isSerializeBefore == 0 || isSerializeBefore == 1) &&
-         isAtomic == 0 &&
+         (isAtomic == 0 || isAtomic == 1) &&
          (isStoreConditional == 0 || isStoreConditional == 1) &&
          (isRdBar == 0 || isRdBar == 1) &&
          (isWrBar == 0 || isWrBar == 1) &&
@@ -420,7 +420,7 @@ void Inst::dumpFeatures(Tick startTick, double *out) {
   out[IN_SQUASH_AF] = isSquashAfter;
   out[IN_SERIAL_AF] = isSerializeAfter;
   out[IN_SERIAL_BE] = isSerializeBefore;
-  out[IN_SC] = isStoreConditional;
+  out[IN_SC] = isStoreConditional + isAtomic * 2;
   out[IN_RDBAR] = isRdBar;
   out[IN_WRBAR] = isWrBar;
   out[IN_NON_SPEC] = isNonSpeculative;

@@ -43,7 +43,7 @@ public:
   bool init(const char *name) {
     trace.open(name);
     if (!trace.is_open()) {
-      cerr << "Cannot open trace file.\n";
+      cerr << "Cannot open trace file " << name << ".\n";
       return false;
     }
     string outputName = name;
