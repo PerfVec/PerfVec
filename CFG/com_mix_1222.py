@@ -2,8 +2,8 @@ import numpy as np
 
 # Data set configuration.
 data_set_dir = 'Data4/'
-#data_set_idx = 17
-data_set_idx = 10
+data_set_idx = 17
+#data_set_idx = 10
 ori_datasets = [
   (data_set_dir + '507.cactuBSSN_r.in.mmap.norm', 1035397081, 16511420, 16511420),
   (data_set_dir + '508.namd_r.in.mmap.norm', 1105247403, 100000000, 1105245194),
@@ -71,12 +71,12 @@ if data_set_idx == 10:
   validbatchnum = 180000
   validbatchsize = 10000
 elif data_set_idx == 17:
-  # total batch number is  / 4096 = 
-  # training set size =  * 4096 = 
-  testbatchnum = 190000
+  # total batch number is 1177,689,809 / 4096 = 287,521.93
+  # training set size = 252000 * 4096 = 1032192000
+  testbatchnum = 266000
   testbatchsize = 1024
-  validbatchnum = 180000
-  validbatchsize = 10000
+  validbatchnum = 252000
+  validbatchsize = 14000
 
 ori_batch_size = 4096
 test_start = testbatchnum * ori_batch_size
