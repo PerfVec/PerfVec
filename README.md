@@ -1,4 +1,7 @@
 # Trace2Vec
+```
+source setup.sh
+```
 
 ## Data Processing
 
