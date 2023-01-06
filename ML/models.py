@@ -135,11 +135,11 @@ class SeqEmLSTM(nn.Module):
     self.nmem = nmem
     if nmem > 0:
       self.mem_embed = nn.Embedding(256, nmem)
-      self.nin += nmem - 8
+      self.nin += nmem - 7
     self.nctrl = nctrl
     if nctrl > 0:
       self.ctrl_embed = nn.Embedding(512, nctrl)
-      self.nin += nctrl - 8
+      self.nin += nctrl - 9
     self.bi = bi
     if gru:
       self.lstm = nn.GRU(self.nin, nhidden, nlayers, batch_first=True, bidirectional=bi)
@@ -174,7 +174,6 @@ class SeqEmLSTM(nn.Module):
       mem_idx = torch.bitwise_left_shift(mem_idx, 1) + ori_x[:, :, 13]
       mem_idx = torch.bitwise_left_shift(mem_idx, 1) + ori_x[:, :, 19]
       memn = self.mem_embed(mem_idx)
-      print(memn)
       embeddings = torch.cat((embeddings, memn), 2)
     if self.nctrl > 0:
       ctrl_idx = ori_x[:, :, 4]
@@ -187,7 +186,6 @@ class SeqEmLSTM(nn.Module):
       ctrl_idx = torch.bitwise_left_shift(ctrl_idx, 1) + ori_x[:, :, 14]
       ctrl_idx = torch.bitwise_left_shift(ctrl_idx, 1) + ori_x[:, :, 15]
       ctrln = self.ctrl_embed(ctrl_idx)
-      print(ctrln)
       embeddings = torch.cat((embeddings, ctrln), 2)
 
     # Combine the rest input.
