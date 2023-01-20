@@ -142,7 +142,7 @@ class SeqEmLSTM(nn.Module):
       self.nin += nctrl - 9
     self.nr = nr
     if nr > 0:
-      self.reg_embed = nn.Embedding(512, nr)
+      self.reg_embed = nn.Embedding(1024, nr)
       self.nin += (nr - 2) * 14
     self.bi = bi
     if gru:
@@ -194,7 +194,7 @@ class SeqEmLSTM(nn.Module):
     if self.nr > 0:
       regs = ori_x[:, :, 23:].view(-1, seq_length, 14, 2)
       reg_idx = 50 * regs[:, :, :, 0] + regs[:, :, :, 1]
-      regem = self.reg_embed(reg_idx).view(-1, seq_length, 14 * nr)
+      regem = self.reg_embed(reg_idx).view(-1, seq_length, 14 * self.nr)
       embeddings = torch.cat((embeddings, regem), 2)
 
     # Combine the rest input.
@@ -226,8 +226,8 @@ class SeqEmLSTM(nn.Module):
 
 
 class InsEmLSTM(SeqEmLSTM):
-  def __init__(self, nhidden, nlayers, narchs=1, nop=1, nmem=0, nctrl=0, gru=False, bi=False, bias=True):
-    super().__init__(nhidden, nlayers, narchs, nop, nmem, nctrl, gru, bi, bias)
+  def __init__(self, nhidden, nlayers, narchs=1, nop=1, nmem=0, nctrl=0, nr=0, gru=False, bi=False, bias=True):
+    super().__init__(nhidden, nlayers, narchs, nop, nmem, nctrl, nr, gru, bi, bias)
 
   def forward(self, x):
     x = super().forward(x)
