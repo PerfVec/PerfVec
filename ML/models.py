@@ -126,7 +126,7 @@ class InsLSTMDSE(SeqLSTM):
 
 
 class SeqEmLSTM(nn.Module):
-  def __init__(self, nhidden, nlayers, narchs=1, nop=1, nmem=0, nctrl=0, gru=False, bi=False, bias=True):
+  def __init__(self, nhidden, nlayers, narchs=1, nop=1, nmem=0, nctrl=0, nr=0, gru=False, bi=False, bias=True):
     super(SeqEmLSTM, self).__init__()
 
     assert nop > 0
@@ -140,6 +140,10 @@ class SeqEmLSTM(nn.Module):
     if nctrl > 0:
       self.ctrl_embed = nn.Embedding(512, nctrl)
       self.nin += nctrl - 9
+    self.nr = nr
+    if nr > 0:
+      self.reg_embed = nn.Embedding(512, nr)
+      self.nin += (nr - 2) * 14
     self.bi = bi
     if gru:
       self.lstm = nn.GRU(self.nin, nhidden, nlayers, batch_first=True, bidirectional=bi)
@@ -173,8 +177,8 @@ class SeqEmLSTM(nn.Module):
       mem_idx = torch.bitwise_left_shift(mem_idx, 1) + ori_x[:, :, 12]
       mem_idx = torch.bitwise_left_shift(mem_idx, 1) + ori_x[:, :, 13]
       mem_idx = torch.bitwise_left_shift(mem_idx, 1) + ori_x[:, :, 19]
-      memn = self.mem_embed(mem_idx)
-      embeddings = torch.cat((embeddings, memn), 2)
+      memem = self.mem_embed(mem_idx)
+      embeddings = torch.cat((embeddings, memem), 2)
     if self.nctrl > 0:
       ctrl_idx = ori_x[:, :, 4]
       ctrl_idx = torch.bitwise_left_shift(ctrl_idx, 1) + ori_x[:, :, 5]
@@ -185,18 +189,25 @@ class SeqEmLSTM(nn.Module):
       ctrl_idx = torch.bitwise_left_shift(ctrl_idx, 1) + ori_x[:, :, 10]
       ctrl_idx = torch.bitwise_left_shift(ctrl_idx, 1) + ori_x[:, :, 14]
       ctrl_idx = torch.bitwise_left_shift(ctrl_idx, 1) + ori_x[:, :, 15]
-      ctrln = self.ctrl_embed(ctrl_idx)
-      embeddings = torch.cat((embeddings, ctrln), 2)
+      ctrlem = self.ctrl_embed(ctrl_idx)
+      embeddings = torch.cat((embeddings, ctrlem), 2)
+    if self.nr > 0:
+      regs = ori_x[:, :, 23:].view(-1, seq_length, 14, 2)
+      reg_idx = 50 * regs[:, :, :, 0] + regs[:, :, :, 1]
+      regem = self.reg_embed(reg_idx).view(-1, seq_length, 14 * nr)
+      embeddings = torch.cat((embeddings, regem), 2)
 
     # Combine the rest input.
     if self.nmem > 0 and self.nctrl > 0:
-      rest = torch.cat((x[:, :, 16:19], x[:, :, 20:input_length]), 2)
+      rest = torch.cat((x[:, :, 16:19], x[:, :, 20:23]), 2)
     elif self.nmem > 0:
-      rest = torch.cat((x[:, :, 4:11], x[:, :, 14:19], x[:, :, 20:input_length]), 2)
+      rest = torch.cat((x[:, :, 4:11], x[:, :, 14:19], x[:, :, 20:23]), 2)
     elif self.nctrl > 0:
-      rest = torch.cat((x[:, :, 0:1], x[:, :, 2:4], x[:, :, 11:14], x[:, :, 16:input_length]), 2)
+      rest = torch.cat((x[:, :, 0:1], x[:, :, 2:4], x[:, :, 11:14], x[:, :, 16:23]), 2)
     else:
-      rest = torch.cat((x[:, :, 0:1], x[:, :, 2:input_length]), 2)
+      rest = torch.cat((x[:, :, 0:1], x[:, :, 2:23]), 2)
+    if self.nr == 0:
+      rest = torch.cat((rest, x[:, :, 23:]), 2)
 
     x = torch.cat((embeddings, rest), 2)
     return x
