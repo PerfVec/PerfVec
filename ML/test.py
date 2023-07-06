@@ -180,6 +180,12 @@ def simulate(args, cfg, model, device, test_loader, name, cfg_num):
     if args.sbatch:
         total_loss /= args.sbatch_size
     print('Loss: {:.6f} \tTime: {:.1f}'.format(total_loss, end_t - start_t), flush=True)
+    if args.save_sim:
+        target_sum = target_sum.view(1, cfg_num, cfg.tgt_length)
+        output_sum = output_sum.view(1, cfg_num, cfg.tgt_length)
+        error = error.view(1, cfg_num, cfg.tgt_length)
+        res = torch.cat((target_sum, output_sum, error), 0).cpu()
+        return res
 
 
 def get_program_representation(args, cfg, model, device, test_loader, rep_dim, name):
@@ -264,6 +270,8 @@ def main():
                         help='disables CUDA')
     parser.add_argument('--no-save', action='store_true', default=False,
                         help='do not save model')
+    parser.add_argument('--save-sim', action='store_true', default=False,
+                        help='save simulation results')
     parser.add_argument('--sbatch', action='store_true', default=False,
                         help='uses small batch training')
     parser.add_argument('--sbatch-size', type=int, default=512, metavar='N',
@@ -285,7 +293,8 @@ def main():
     assert len(args.models) == 1
     model = eval(args.models[0])
     rep_dim = get_representation_dim(model)
-    cfg_num = cfg.cfg_num
+    if not args.rep:
+        cfg_num = cfg.cfg_num
     if args.uarch_net or args.uarch_net_unseen:
         model.init_paras()
     if args.uarch_net:
@@ -326,6 +335,8 @@ def main():
         if args.rep:
             all_rep = torch.zeros(len(cfg.sim_datasets), rep_dim)
             torch.set_printoptions(threshold=1000)
+        if args.save_sim:
+            res = torch.zeros(len(cfg.sim_datasets), 3, cfg_num, cfg.tgt_length)
         for i in range(len(cfg.sim_datasets)):
             name = cfg.sim_datasets[i][0].replace(cfg.data_set_dir, '').replace(".in.mmap.norm", '')
             print(name, flush=True)
@@ -336,6 +347,8 @@ def main():
             test_loader = torch.utils.data.DataLoader(cur_dataset, **kwargs)
             if args.rep:
                 all_rep[i] = get_program_representation(args, cfg, model, device, test_loader, rep_dim, name)
+            elif args.save_sim:
+                res[i] = simulate(args, cfg, model, device, test_loader, name, cfg_num)
             else:
                 simulate(args, cfg, model, device, test_loader, name, cfg_num)
             print('', flush=True)
@@ -343,6 +356,10 @@ def main():
             name = args.checkpoints.replace("checkpoints/", "res/prep_%s_" % args.cfg)
             print("Save program representations to", name)
             torch.save(all_rep, name)
+        if args.save_sim:
+            name = args.checkpoints.replace("checkpoints/", "res/simres_%s_" % args.cfg)
+            print("Save simulation results to", name)
+            torch.save(res, name)
 
 
 if __name__ == '__main__':
