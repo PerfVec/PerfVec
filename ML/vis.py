@@ -70,9 +70,9 @@ def vis(args):
 
     # Visualize representations.
     mpl.rcParams['text.usetex'] = True
-    font = {'size' : 20}
+    font = {'size' : 24}
     plt.rc('font', **font)
-    ms = 70
+    ms = 100
     fig_size = 8
     if args.dim == 3:
         fig = plt.figure(figsize=(fig_size, fig_size))
@@ -129,7 +129,7 @@ def vis(args):
                     label = name + "_O%d" % i
                     ax.scatter(proj[idx,i,0], proj[idx,i,1], proj[idx,i,2], c=np.array(cmap(cur_idx)).reshape(1,4), label=label, alpha=0.5, marker=markers[i])
             cur_idx += 1
-        ax.legend(markerscale=2, shadow=False, borderpad=0.2, borderaxespad=0.2)
+        ax.legend(markerscale=1.5, shadow=False, borderpad=0.1, borderaxespad=0.1, framealpha=0.3)
         file_name = args.checkpoints.replace("res/", "fig/opt_")
     else:
         cmap = cm.get_cmap('tab10')
@@ -153,7 +153,7 @@ def vis(args):
         #        ax.scatter(proj[idx,0], proj[idx,1], c=np.array(cmap(label)).reshape(1,4), label=label, alpha=0.5)
         #    elif args.dim == 3:
         #        ax.scatter(proj[idx,0], proj[idx,1], proj[idx,2], c=np.array(cmap(label)).reshape(1,4), label=label, alpha=0.5)
-        ax.legend(markerscale=2)
+        ax.legend(markerscale=1.5, shadow=False, borderpad=0.1, borderaxespad=0.1, framealpha=0.5)
         file_name = args.checkpoints.replace("checkpoints/", "fig/urep_")
 
     file_name = file_name.replace(".pt", "")
