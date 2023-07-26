@@ -76,7 +76,7 @@ def train_all(train_size, targets, epochs, h, ne):
   print("Better designs are", total / targets.shape[0])
 
 
-parser = argparse.ArgumentParser(description='ASPLOS06 testing')
+parser = argparse.ArgumentParser(description='DAC16 DSE testing')
 parser.add_argument('--train-size', type=int, default=18, metavar='N')
 parser.add_argument('--hidden-size', type=int, default=2, metavar='N')
 parser.add_argument('--nestimators', type=int, default=50, metavar='N')

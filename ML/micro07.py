@@ -9,6 +9,9 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim.lr_scheduler import StepLR
 
 
+trained_models = []
+
+
 class MLP(nn.Module):
   def __init__(self, h=4):
     super(MLP, self).__init__()
@@ -21,7 +24,22 @@ class MLP(nn.Module):
     return x
 
 
-def train(train_size, targets, epochs, h):
+class LinearMLP(nn.Module):
+  def __init__(self, mlps):
+    super(LinearMLP, self).__init__()
+    self.mlps = mlps
+    self.dim = len(mlps)
+    self.linear = nn.Linear(self.dim, 1)
+
+  def forward(self, x):
+    mlps_res = torch.zeros(x.shape[0], self.dim)
+    for i in range(self.dim):
+      mlps_res[:, i:i+1] = self.mlps[i].forward(x)
+    x = self.linear(mlps_res)
+    return x
+
+
+def train(train_size, targets, epochs, h, is_infer=False):
   nums = torch.arange(1, 7).float()
   l1_sizes = nums.view(6, 1).repeat(1, 6).view(36, 1)
   l2_sizes = nums.repeat(6, 1).view(36, 1)
@@ -48,7 +66,10 @@ def train(train_size, targets, epochs, h):
   dataset = dataset.to(device)
   #exit()
 
-  model = MLP(h)
+  if is_infer:
+    model = LinearMLP(trained_models)
+  else:
+    model = MLP(h)
   model.to(device)
   optimizer = optim.Adam(model.parameters())
   loss_fn = nn.MSELoss()
@@ -72,19 +93,19 @@ def train(train_size, targets, epochs, h):
   with torch.no_grad():
     output = model(train_set[:, :2])
     loss = loss_fn(output, train_set[:, 2:])
-    print(train_set[:, :2], output, train_set[:, 2:])
+    #print(train_set[:, :2], output, train_set[:, 2:])
     print("Train loss:", loss.item())
     output = model(test_set[:, :2])
     loss = loss_fn(output, test_set[:, 2:])
-    print(test_set[:, :2], output, test_set[:, 2:])
+    #print(test_set[:, :2], output, test_set[:, 2:])
     print("Test loss:", loss.item())
     errors = (output - test_set[:, 2:]) / test_set[:, 2:]
-    print("Test errors:", errors)
+    #print("Test errors:", errors)
     print("Test mean error:", torch.mean(torch.abs(errors), dim=0))
     output = model(dataset[:, :2])
     loss = loss_fn(output, dataset[:, 2:])
     errors = (output - dataset[:, 2:]) / dataset[:, 2:]
-    print("All errors:", errors)
+    #print("All errors:", errors)
     print("All mean error:", torch.mean(torch.abs(errors), dim=0))
 
   true = dataset[:, 2] * 100 * (1000 + torch.pow(2, dataset[:, 0] + 1) * 10 + torch.pow(2, dataset[:, 1] + 7)) / 1000
@@ -99,23 +120,37 @@ def train(train_size, targets, epochs, h):
   better_indices = true < true[idx]
   rank = better_indices.count_nonzero().item()
   print("Rank at", rank)
+  if not is_infer:
+    # Freeze parameters.
+    for param in model.parameters():
+        param.requires_grad = False
+    trained_models.append(model)
   return rank
 
 
-def train_all(train_size, targets, epochs, h):
-  print("\nTrain size", train_size)
+def train_all(np, train_size, infer_size, targets, epochs, h):
+  print("\nTrain size", train_size, "Program number", np, "Infer size", infer_size)
   total = 0
-  for i in range(targets.shape[0]):
-    print("\nBenchmark", i)
+  train_total = 0
+  infer_total = 0
+  assert np < targets.shape[0]
+  for i in range(np):
+    print("\nBenchmark to train", i)
     rank = train(train_size, targets[i].view(36, 1), epochs, h)
-    total += rank / 36
-  print("Better designs are", total / targets.shape[0])
+    train_total += rank / 36
+  for i in range(np, targets.shape[0]):
+    print("\nBenchmark to infer", i)
+    rank = train(infer_size, targets[i].view(36, 1), epochs, h, True)
+    infer_total += rank / 36
+  print("Better designs are", (train_total + infer_total) / targets.shape[0], train_total / np, infer_total / (targets.shape[0] - np))
 
 
-parser = argparse.ArgumentParser(description='ASPLOS06 testing')
+parser = argparse.ArgumentParser(description='MICRO07 DSE testing')
 parser.add_argument('--train-size', type=int, default=18, metavar='N')
 parser.add_argument('--hidden-size', type=int, default=2, metavar='N')
 parser.add_argument('--epochs', type=int, default=10000, metavar='N')
+parser.add_argument('--train-program-num', type=int, default=5, metavar='N')
+parser.add_argument('--infer-size', type=int, default=5, metavar='N')
 args = parser.parse_args()
 train_size = args.train_size
 h = args.hidden_size
@@ -144,7 +179,29 @@ targets /= 1000000000000
 print(targets.shape)
 
 if train_size == 0:
-  for train_size in range(1, 36):
-    train_all(train_size, targets, epochs, h)
+  ts_start = 1
+  ts_end = 36
 else:
-  train_all(train_size, targets, epochs, h)
+  ts_start = train_size
+  ts_end = train_size + 1
+
+if args.train_program_num == 0:
+  np_start= 1
+  np_end = targets.shape[0] - 1
+else:
+  np_start = args.train_program_num
+  np_end = args.train_program_num + 1
+assert np_end < targets.shape[0]
+
+if args.infer_size == 0:
+  is_start= 1
+  is_end = ts_end - 1
+else:
+  is_start = args.infer_size
+  is_end = args.infer_size + 1
+assert is_end < ts_end
+
+for ts in range(ts_start, ts_end):
+  for np in range(np_start, np_end):
+    for ins in range(is_start, is_end):
+      train_all(np, ts, ins, targets, epochs, h)
