@@ -43,7 +43,11 @@ def profile_model(model, para=False):
             return {'x': x, 'para': para}
         constructor = input_constructor
     else:
-        constructor = None
+        #constructor = None
+        def input_constructor(res):
+            x = torch.zeros(1, *res)
+            return {'x': x}
+        constructor = input_constructor
     macs, params = get_model_complexity_info(model, (seq_length, input_length), as_strings=True,
                                              input_constructor=constructor, print_per_layer_stat=True, verbose=True)
     print('{:<30}  {:<8}'.format('Computational complexity: ', macs))

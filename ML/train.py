@@ -251,8 +251,8 @@ def main_rank(rank, args):
             device = rank
             model = DDP(model.to(device), device_ids=[device])
         elif torch.cuda.device_count() > 1:
-            print ('Available devices ', torch.cuda.device_count())
-            print ('Current cuda device ', torch.cuda.current_device())
+            print ('Available devices', torch.cuda.device_count())
+            print ('Current cuda device', torch.cuda.current_device())
             model = nn.DataParallel(model).to(device)
         else:
             model.to(device)

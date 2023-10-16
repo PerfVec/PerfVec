@@ -30,6 +30,6 @@ for j in range(data_set_idx):
   norm_data[:, :] /= std
 
   norm_data.flush()
-  print(norm_data[0, 0])
+  print(norm_data[0])
 
 print('Done.')
