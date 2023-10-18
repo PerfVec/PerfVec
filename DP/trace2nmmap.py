@@ -2,11 +2,14 @@ import sys
 import os
 import timeit
 import subprocess
+import numpy as np
+from DP.inst2mmap import inst2mmap
+from DP.normalize_inst_mmap import norm_mmap
 
 
-def trace2mmap(filename):
+def trace2nmmap(filename, is_norm, mean, std):
   start_time = timeit.default_timer()
-  log_name = filename.replace('.txt', '.t2m.log')
+  log_name = filename.replace('.txt', '.t2n.log')
   with open(log_name, 'w') as log_file:
     try:
       cmd = ['./DP/buildInstFeature', filename]
@@ -15,25 +18,24 @@ def trace2mmap(filename):
       output = proc.stderr.decode()
       log_file.write(output)
       output = output.splitlines()[-3:]
-      length = output[0].split()[2]
+      length = int(output[0].split()[2])
     except subprocess.CalledProcessError:
       print("Error when extracting features of ", filename)
       return 1
-    try:
-      in_file = filename.replace('.txt', '.in')
-      cmd = ['python', '-m', 'DP.inst2mmap', '-f', '-l=' + length, in_file]
-      log_file.write(str(cmd) + '\n')
-      proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-      output = proc.stdout.decode()
-      log_file.write(output)
-    except subprocess.CalledProcessError:
-      print("Error when converting", in_file, "to mmap")
+    in_file = filename.replace('.txt', '.in')
+    if is_norm:
+      out_file = in_file + ".nmmap"
+    else:
+      out_file = in_file + ".mmap"
+    array, ninsts, bad_lines = inst2mmap([in_file], length, out_file, 0, 0, True, False, log_file)
+    if ninsts != length or bad_lines != 0:
+      print("Error when converting", in_file, "to mmap:", output)
       return 1
+    if is_norm:
+      norm_mmap(array, mean, std)
+      print(array[0], file=log_file)
+      print('Normalization done.', file=log_file)
   print("Convert", filename, "using", str(timeit.default_timer()-start_time), "s", flush=True)
-  output = output.splitlines()[-1].split()
-  if len(output) != 7 or output[2] != length or output[4] != str(0):
-    print("Error when converting", in_file, "to mmap:", output)
-    return 1
   return 0
 
 
@@ -42,8 +44,12 @@ if len(sys.argv) > 2:
   start = int(sys.argv[2])
 else:
   start = 0
+stats = np.load("Data/stats.npz")
+mean = stats['mean']
+std = stats['std']
+std[std == 0.0] = 1.0
 nerrs = 0
 for i in range(start, int(sys.argv[1])):
   name = "/mnt/md0/t2v/trace_sear_arm/t" + str(i) + ".txt"
-  nerrs += trace2mmap(name)
+  nerrs += trace2nmmap(name, True, mean, std)
 print("There were %d errors in total." % nerrs)

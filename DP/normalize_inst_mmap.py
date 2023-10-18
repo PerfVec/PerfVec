@@ -3,33 +3,40 @@ import os
 import argparse
 import numpy as np
 #from CFG import data_item_format, input_start, inst_length, data_set_dir, datasets, data_set_idx
-from CFG import feature_format, input_length, data_set_dir, data_set_idx, datasets
+#from CFG import feature_format, input_length, data_set_dir, data_set_idx, datasets
+from CFG import feature_format, input_length, sim_datasets as datasets
 
 
-parser = argparse.ArgumentParser(description="Normalize memmap datasets")
-args = parser.parse_args()
+def norm_inmmap(filename, length, width, fileformat, mean, std):
+  shp = (length, width)
+  output = filename + '.norm'
+  all_data = np.memmap(filename, dtype=fileformat, mode='r', shape=shp)
+  norm_data = np.memmap(output, dtype=fileformat, mode='w+', shape=shp)
+  print("Normalize memmap dataset", filename, "shape is", shp, flush=True)
 
-for j in range(data_set_idx):
-  total_size = datasets[j][1]
-  #shp = (total_size, inst_length)
-  shp = (total_size, input_length)
-  output = datasets[j][0] + '.norm'
-  #all_data = np.memmap(datasets[j][0], dtype=data_item_format, mode='r', shape=shp)
-  all_data = np.memmap(datasets[j][0], dtype=feature_format, mode='r', shape=shp)
-  norm_data = np.memmap(output, dtype=feature_format, mode='w+', shape=shp)
-  print("Normalize memmap dataset", datasets[j][0], "shape is", shp, flush=True)
+  norm_data[:, :] = all_data[:, :]
+  norm_mmap(norm_data, mean, std)
 
-  stats = np.load(data_set_dir + "stats.npz")
+  print(norm_data[0])
+  print('Done.')
+
+
+def norm_mmap(data, mean, std):
+  #data[:, input_start:inst_length] -= mean
+  #data[:, input_start:inst_length] /= std
+  data[:, :] -= mean
+  data[:, :] /= std
+  data.flush()
+
+
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser(description="Normalize memmap datasets")
+  args = parser.parse_args()
+
+  #stats = np.load(data_set_dir + "stats.npz")
+  stats = np.load("Data/stats.npz")
   mean = stats['mean']
   std = stats['std']
   std[std == 0.0] = 1.0
-  norm_data[:, :] = all_data[:, :]
-  #norm_data[:, input_start:inst_length] -= mean
-  #norm_data[:, input_start:inst_length] /= std
-  norm_data[:, :] -= mean
-  norm_data[:, :] /= std
-
-  norm_data.flush()
-  print(norm_data[0])
-
-print('Done.')
+  for j in range(len(datasets)):
+    norm_inmmap(datasets[j][0], datasets[j][1], input_length, feature_format, mean, std)
