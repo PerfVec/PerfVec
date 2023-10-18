@@ -35,7 +35,7 @@ def trace2nmmap(filename, is_norm, mean, std):
       norm_mmap(array, mean, std)
       print(array[0], file=log_file)
       print('Normalization done.', file=log_file)
-  print("Convert", filename, "using", str(timeit.default_timer()-start_time), "s", flush=True)
+  print("Convert", filename, "with", ninsts, "instructions using", str(timeit.default_timer()-start_time), "s", flush=True)
   return 0
 
 
