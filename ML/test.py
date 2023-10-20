@@ -289,6 +289,7 @@ def main():
 
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     torch.manual_seed(args.seed)
+    #torch.set_float32_matmul_precision('high')
 
     assert len(args.models) == 1
     model = eval(args.models[0])
