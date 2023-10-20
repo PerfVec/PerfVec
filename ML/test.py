@@ -302,6 +302,7 @@ def main():
     load_checkpoint(args.checkpoints, model)
     if args.uarch_net_unseen:
         model.setup_test()
+    model = torch.compile(model)
     #profile_model(model)
     device = torch.device("cuda" if use_cuda else "cpu")
     if torch.cuda.device_count() > 1:
