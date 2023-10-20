@@ -55,6 +55,8 @@ def inst2mmap(fnames, num, output, start, end, is_feature, is_target, printout=s
         if ninsts % 1000000 == 0:
           all_feats.flush()
           print('.', flush=True, end='', file=printout)
+        if ninsts % 100000000 == 0:
+          print('', flush=True, file=printout)
         if end != 0 and nlines == end:
           break
 

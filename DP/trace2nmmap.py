@@ -14,8 +14,8 @@ def trace2nmmap(filename, is_norm, mean, std):
     try:
       cmd = ['./DP/buildInstFeature', filename]
       log_file.write(str(cmd) + '\n')
-      proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-      output = proc.stderr.decode()
+      proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, text=True)
+      output = proc.stderr
       log_file.write(output)
       output = output.splitlines()[-3:]
       length = int(output[0].split()[2])
@@ -39,17 +39,20 @@ def trace2nmmap(filename, is_norm, mean, std):
   return 0
 
 
-assert len(sys.argv) > 1
-if len(sys.argv) > 2:
-  start = int(sys.argv[2])
-else:
-  start = 0
-stats = np.load("Data/stats.npz")
-mean = stats['mean']
-std = stats['std']
-std[std == 0.0] = 1.0
-nerrs = 0
-for i in range(start, int(sys.argv[1])):
-  name = "/mnt/md0/t2v/trace_sear_arm/t" + str(i) + ".txt"
+if __name__ == '__main__':
+  assert len(sys.argv) > 1
+  if len(sys.argv) > 2:
+    start = int(sys.argv[2])
+  else:
+    start = 0
+  stats = np.load("Data4/stats.npz")
+  mean = stats['mean']
+  std = stats['std']
+  std[std == 0.0] = 1.0
+  nerrs = 0
+  name = sys.argv[1]
   nerrs += trace2nmmap(name, True, mean, std)
-print("There were %d errors in total." % nerrs)
+  #for i in range(start, int(sys.argv[1])):
+  #  name = "/mnt/md0/t2v/trace_sear_arm/t" + str(i) + ".txt"
+  #  nerrs += trace2nmmap(name, True, mean, std)
+  print("There were %d errors in total." % nerrs)
