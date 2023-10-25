@@ -48,7 +48,7 @@ struct Inst {
   int dwalkDepth[3];
   Addr dwalkAddr[3];
   int dWritebacks[3];
-  int sqIdx;
+  long sqIdx;
 
   // Instruction access.
   Addr pc;

@@ -104,7 +104,7 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace, bool isSingleTrace) {
     return FILE_END;
   }
   ifstream *trace = &ROBtrace;
-  int completeTick2, outTick2;
+  Tick completeTick2, outTick2;
   if (sqIdx == -99) {
     Tick startTick;
     ROBtrace >> startTick;
@@ -120,9 +120,10 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace, bool isSingleTrace) {
     } else if (sqIdx != -1 && !isFault && ROBtrace.peek() != '\n') {
       ROBtrace >> storeTick >> sqOutTick;
     } else if (sqIdx != -1 && !isFault) {
-      int isFault2, sqIdx2;
+      int isFault2;
+      long sqIdx2;
       Tick inTick2;
-      int decodeTick2, renameTick2, dispatchTick2, issueTick2;
+      Tick decodeTick2, renameTick2, dispatchTick2, issueTick2;
       SQtrace >> isFault2 >> sqIdx2 >> inTick2 >> completeTick2 >> outTick2 >>
           decodeTick2 >> renameTick2 >> dispatchTick2 >> issueTick2 >>
           storeTick >> sqOutTick;
@@ -172,8 +173,8 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace, bool isSingleTrace) {
          isQuiesce == 0 &&
          (isNonSpeculative == 0 || isNonSpeculative == 1));
   assert(!inSQ() || isSingleTrace || isFault ||
-         (completeTick2 == completeTick * TICK_STEP &&
-          outTick2 == outTick * TICK_STEP));
+         (completeTick2 / TICK_STEP == completeTick &&
+          outTick2 / TICK_STEP == outTick));
 
   // Read data memory access info.
   *trace >> isAddr;
