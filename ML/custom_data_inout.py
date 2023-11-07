@@ -6,14 +6,14 @@ from torch.utils.data import Dataset
 
 class MemMappedDataset(Dataset):
 
-    def __init__(self, paras, start, end):
+    def __init__(self, cfg, paras, start, end):
         assert len(paras) == 3
         file_name = paras[0]
         in_size = paras[1]
         out_size = paras[2]
         self.in_arr = np.memmap(file_name, dtype=feature_format, mode='r',
                                 shape=(in_size, input_length))
-        self.out_arr = np.memmap(get_out_name(file_name), dtype=target_format, mode='r',
+        self.out_arr = np.memmap(cfg.get_out_name(file_name), dtype=target_format, mode='r',
                                  shape=(out_size, ori_tgt_length * cfg_num))
         assert in_size >= out_size
         if end < start or end > out_size:
@@ -43,7 +43,7 @@ class MemMappedDataset(Dataset):
 
 class CombinedMMDataset(Dataset):
 
-    def __init__(self, file_num, start, end):
+    def __init__(self, cfg, file_num, start, end):
         if file_num > len(datasets):
             raise AttributeError("Require more files than that exist.")
         total_size = 0
@@ -64,14 +64,14 @@ class CombinedMMDataset(Dataset):
         for i in range(file_num-1):
             self.starts.append(int(datasets[i][2] * (start / total_size)))
             self.mm_sizes.append(int(datasets[i][2] * frac))
-            self.mm_sets.append(MemMappedDataset(datasets[i],
+            self.mm_sets.append(MemMappedDataset(cfg, datasets[i],
                                 self.starts[i], self.starts[i] + self.mm_sizes[i]))
             cum_start += self.starts[i]
             cum_size += self.mm_sizes[i]
             self.bounds.append(cum_size)
         self.starts.append(start - cum_start)
         self.mm_sizes.append(self.size - cum_size)
-        self.mm_sets.append(MemMappedDataset(datasets[file_num-1],
+        self.mm_sets.append(MemMappedDataset(cfg, datasets[file_num-1],
                             self.starts[file_num-1], self.starts[file_num-1] + self.mm_sizes[file_num-1]))
         self.bounds.append(self.size)
 
