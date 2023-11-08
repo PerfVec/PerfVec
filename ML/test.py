@@ -304,7 +304,7 @@ def main():
     if args.uarch_net_unseen:
         model.setup_test()
     model = torch.compile(model)
-    #profile_model(model)
+    #profile_model(cfg, model)
     device = torch.device("cuda" if use_cuda else "cpu")
     if torch.cuda.device_count() > 1:
         print ('Available devices', torch.cuda.device_count())

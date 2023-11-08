@@ -10,7 +10,6 @@ import torch.optim as optim
 
 from .models import *
 from .custom_data import *
-from .utils import profile_model, get_representation_dim
 
 
 class DSE(nn.Module):

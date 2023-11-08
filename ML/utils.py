@@ -34,7 +34,7 @@ def generate_model_name(name, epoch=None):
     return name
 
 
-def profile_model(model, para=False):
+def profile_model(cfg, model, para=False):
     print("Model info:")
     if para:
         def input_constructor(res):
@@ -48,7 +48,7 @@ def profile_model(model, para=False):
             x = torch.zeros(1, *res)
             return {'x': x}
         constructor = input_constructor
-    macs, params = get_model_complexity_info(model, (seq_length, input_length), as_strings=True,
+    macs, params = get_model_complexity_info(model, (cfg.seq_length, cfg.input_length), as_strings=True,
                                              input_constructor=constructor, print_per_layer_stat=True, verbose=True)
     print('{:<30}  {:<8}'.format('Computational complexity: ', macs))
     print('{:<30}  {:<8}'.format('Number of parameters: ', params))

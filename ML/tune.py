@@ -228,7 +228,7 @@ def main_rank(rank, args):
         # Replace the linear layer.
         model.linear = nn.Linear(rep_dim, cfg.cfg_num * cfg.tgt_length, bias=args.bias)
     if rank == 0:
-        profile_model(model)
+        profile_model(cfg, model)
     device = torch.device("cuda" if use_cuda else "cpu")
     if args.distributed:
         device = rank
