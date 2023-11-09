@@ -201,7 +201,10 @@ def main_rank(rank, args):
 
     #dataset1 = MemMappedDataset(data_file_name, total_size, 0, args.train_size)
     #dataset2 = MemMappedDataset(data_file_name, total_size, valid_start, valid_end)
-    if args.sbatch:
+    if args.learn_rep:
+        dataset1 = RepDataset(cfg.dataset, 0, args.train_size)
+        dataset2 = RepDataset(cfg.dataset, cfg.valid_start, cfg.valid_end)
+    elif args.sbatch:
         dataset1 = CombinedMMBDataset(cfg, cfg.data_set_idx, 0, args.train_size)
         dataset2 = CombinedMMBDataset(cfg, cfg.data_set_idx, cfg.valid_start, cfg.valid_end)
     else:
@@ -245,7 +248,7 @@ def main_rank(rank, args):
     for name in args.models:
         model = eval(name)
         if rank == 0:
-            profile_model(model)
+            profile_model(cfg, model)
         device = torch.device("cuda" if use_cuda else "cpu")
         if args.distributed:
             device = rank
@@ -332,6 +335,8 @@ def main():
                         help='disables CUDA training')
     parser.add_argument('--dry-run', action='store_true', default=False,
                         help='quickly check a single pass')
+    parser.add_argument('--learn-rep', action='store_true', default=False,
+                        help='learns representations')
     parser.add_argument('--sbatch', action='store_true', default=False,
                         help='uses small batch training')
     parser.add_argument('--sbatch-size', type=int, default=512, metavar='N',
