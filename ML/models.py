@@ -240,14 +240,19 @@ class PositionalEncoding(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
         position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0)/d_model))
-        pe = torch.zeros(1, max_len, d_model)
+        if d_model % 2 == 1:
+            dd = d_model + 1
+        else:
+            dd = d_model
+        div_term = torch.exp(torch.arange(0, dd, 2) * (-math.log(10000.0)/dd))
+        pe = torch.zeros(1, max_len, dd)
         pe[0, :, 0::2] = torch.sin(position * div_term)
         pe[0, :, 1::2] = torch.cos(position * div_term)
+        pe = pe[:, :seq_length, :d_model]
         self.register_buffer('pe', pe)
 
     def forward(self, x):
-        x = x + self.pe[:, :seq_length, :]
+        x = x + self.pe
         return self.dropout(x)
 
 
@@ -269,7 +274,7 @@ class TransformerModel(nn.Module):
         else:
           self.embed = False
           self.nfeatures = input_length
-        self.pos_encoder = PositionalEncoding(self.nfeatures, dropout)
+        self.pos_encoder = PositionalEncoding(self.nfeatures, dropout, max_len=seq_length)
         encoder_layers = TransformerEncoderLayer(d_model=self.nfeatures,
                                                  nhead=nhead,
                                                  dim_feedforward=nhid,
@@ -295,12 +300,16 @@ class TransformerModel(nn.Module):
         self.linear.bias.data.zero_()
         self.linear.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, x):
+    def extract_representation(self, x):
         if self.embed:
           x = self.inst_embed(x)
         x = self.pos_encoder(x)
         #x = self.encoder(x, self.src_mask)
         x = self.encoder(x)
+        return x
+
+    def forward(self, x):
+        x = self.extract_representation(x)
         x = x[:, -1, :]
         x = self.linear(x)
         return x
@@ -326,7 +335,7 @@ class CNN(nn.Module):
           print(i, num)
         self.fc_in = int(num * lc)
         self.fc1 = nn.Linear(self.fc_in, h)
-        self.linear = nn.Linear(h, narchs * tgt_length)
+        self.linear = nn.Linear(h, narchs * tgt_length, bias=False)
 
     def forward(self, x):
         x = x.view(-1, seq_length, input_length).transpose(2,1)
