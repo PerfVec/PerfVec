@@ -70,8 +70,9 @@ def vis(args):
 
     # Visualize representations.
     mpl.rcParams['text.usetex'] = True
-    font = {'size' : 18}
+    font = {'size' : 24}
     plt.rc('font', **font)
+    ms = 100
     fig_size = 8
     if args.dim == 3:
         fig = plt.figure(figsize=(fig_size, fig_size))
@@ -108,7 +109,7 @@ def vis(args):
         cur_idx = 0
         for idx in mask:
             name = sim_datasets[idx][0]
-            name = name.replace(data_set_dir, "").replace(".in.mmap.norm", "").replace("_r", "")
+            name = name.replace(data_set_dir, "").replace(".in.mmap.norm", "").replace("_r", "").replace("_ir", "")
             for i in range(4):
                 cidx = 4 * idx + i
                 if args.dim == 2:
@@ -117,9 +118,9 @@ def vis(args):
                             label = name + "_O%d" % i
                         else:
                             label = name
-                        ax.scatter(proj[idx,i,0], proj[idx,i,1], c=np.array(cmap(cur_idx)).reshape(1,4), label=label, alpha=0.5, marker=markers[i], s=50)
+                        ax.scatter(proj[idx,i,0], proj[idx,i,1], c=np.array(cmap(cur_idx)).reshape(1,4), label=label, alpha=0.5, marker=markers[i], s=ms)
                     else:
-                        ax.scatter(proj[idx,i,0], proj[idx,i,1], c=np.array(cmap(cur_idx)).reshape(1,4), alpha=0.5, marker=markers[i], s=50)
+                        ax.scatter(proj[idx,i,0], proj[idx,i,1], c=np.array(cmap(cur_idx)).reshape(1,4), alpha=0.5, marker=markers[i], s=ms)
                     if i < 3:
                         x = [proj[idx,i,0], proj[idx,i+1,0]]
                         y = [proj[idx,i,1], proj[idx,i+1,1]]
@@ -128,7 +129,7 @@ def vis(args):
                     label = name + "_O%d" % i
                     ax.scatter(proj[idx,i,0], proj[idx,i,1], proj[idx,i,2], c=np.array(cmap(cur_idx)).reshape(1,4), label=label, alpha=0.5, marker=markers[i])
             cur_idx += 1
-        ax.legend(markerscale=2, shadow=False, borderpad=0.2, borderaxespad=0.2)
+        ax.legend(markerscale=1.5, shadow=False, borderpad=0.1, borderaxespad=0.1, framealpha=0.3)
         file_name = args.checkpoints.replace("res/", "fig/opt_")
     else:
         cmap = cm.get_cmap('tab10')
@@ -143,16 +144,16 @@ def vis(args):
                 idx |= (all_idx >= 74) & (all_idx < 77) 
                 name = "in-order"
             if args.dim == 2:
-                ax.scatter(proj[idx,0], proj[idx,1], c=np.array(cmap(label)).reshape(1,4), label=name, alpha=0.5)
+                ax.scatter(proj[idx,0], proj[idx,1], c=np.array(cmap(label)).reshape(1,4), label=name, s=ms, alpha=0.5)
             elif args.dim == 3:
-                ax.scatter(proj[idx,0], proj[idx,1], proj[idx,2], c=np.array(cmap(label)).reshape(1,4), label=name, alpha=0.5)
+                ax.scatter(proj[idx,0], proj[idx,1], proj[idx,2], c=np.array(cmap(label)).reshape(1,4), label=name, s=ms, alpha=0.5)
         #for idx in range(num):
         #    label = idx
         #    if args.dim == 2:
         #        ax.scatter(proj[idx,0], proj[idx,1], c=np.array(cmap(label)).reshape(1,4), label=label, alpha=0.5)
         #    elif args.dim == 3:
         #        ax.scatter(proj[idx,0], proj[idx,1], proj[idx,2], c=np.array(cmap(label)).reshape(1,4), label=label, alpha=0.5)
-        ax.legend(markerscale=2)
+        ax.legend(markerscale=1.5, shadow=False, borderpad=0.1, borderaxespad=0.1, framealpha=0.5)
         file_name = args.checkpoints.replace("checkpoints/", "fig/urep_")
 
     file_name = file_name.replace(".pt", "")

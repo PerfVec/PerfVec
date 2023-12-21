@@ -7,6 +7,22 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from CFG import seq_length, input_length, tgt_length, data_set_dir
 
 
+class Predictor(nn.Module):
+  def __init__(self, cfg, bias=True, global_bias=False):
+    super(Predictor, self).__init__()
+    assert not bias or not global_bias
+    self.linear = nn.Linear(cfg.input_length, cfg.cfg_num * cfg.tgt_length, bias=bias)
+    self.global_bias = global_bias
+    if self.global_bias:
+      self.gb = nn.Parameter(torch.randn(1))
+
+  def forward(self, x):
+    x = self.linear(x)
+    if self.global_bias:
+      x += self.gb
+    return x
+
+
 class SeqLSTM(nn.Module):
   def __init__(self, nhidden, nlayers, narchs=1, nembed=0, gru=False, bi=False, norm=False, bias=True):
     super(SeqLSTM, self).__init__()

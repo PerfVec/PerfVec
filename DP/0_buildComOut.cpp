@@ -46,11 +46,11 @@ public:
       cerr << "Cannot open trace file " << name << ".\n";
       return false;
     }
-    string outputName = name;
-    outputName.replace(outputName.end()-3, outputName.end(), "sq.txt");
-    sqtrace.open(outputName);
+    string sqName = name;
+    sqName.replace(sqName.end()-3, sqName.end(), "sq.txt");
+    sqtrace.open(sqName);
     if (!sqtrace.is_open()) {
-      cerr << "Single trace input.\n";
+      cerr << "Single trace input (" << sqName << ").\n";
       isSingleTrace = true;
     } else
       isSingleTrace = false;
