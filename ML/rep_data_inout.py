@@ -24,5 +24,5 @@ class RepDataset(Dataset):
 
         idx += self.start
         x = self.data[idx, 0:self.rep_dim]
-        y = self.data[idx, self.rep_dim]
+        y = self.data[idx, self.rep_dim:self.rep_dim+1] * 10000000000
         return x, y
