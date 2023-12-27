@@ -41,12 +41,12 @@ def analyze(args, cfg, output, target, cfg_num, seq=False):
                 else:
                     cur_output = output[:,c,i]
                     cur_target = target[:,c,i]
-            #print("output:", cur_output)
             print("\ttarget:", cur_target)
-            cur_output = np.rint(cur_output)
-            cur_target = np.rint(cur_target)
-            print("\tnorm output:", cur_output)
+            if not args.pred:
+                cur_output = np.rint(cur_output)
+                cur_target = np.rint(cur_target)
             errs = cur_target - cur_output
+            print("\tnorm output:", cur_output)
             print("\terrors:", errs)
             errs = errs.ravel()
 
@@ -260,6 +260,8 @@ def main():
                         help='tests micro-architecture nets')
     parser.add_argument('--uarch-net-unseen', action='store_true', default=False,
                         help='tests micro-architecture nets on unseen programs')
+    parser.add_argument('--pred', action='store_true', default=False,
+                        help='tests predictors')
     parser.add_argument('--phase', action='store_true', default=False,
                         help='phase simulation')
     parser.add_argument('--sim-length', type=int, default=100000000, metavar='N',
@@ -293,7 +295,6 @@ def main():
 
     assert len(args.models) == 1
     model = eval(args.models[0])
-    rep_dim = get_representation_dim(model)
     if not args.rep:
         cfg_num = cfg.cfg_num
     if args.uarch_net or args.uarch_net_unseen:
@@ -303,13 +304,14 @@ def main():
     load_checkpoint(args.checkpoints, model)
     if args.uarch_net_unseen:
         model.setup_test()
-    model = torch.compile(model)
     #profile_model(cfg, model)
     device = torch.device("cuda" if use_cuda else "cpu")
     if torch.cuda.device_count() > 1:
         print ('Available devices', torch.cuda.device_count())
         print ('Current cuda device', torch.cuda.current_device())
         model = nn.DataParallel(model)
+    elif int(torch.__version__[0]) >= 2:
+        model = torch.compile(model)
     model.to(device)
 
     kwargs = {'batch_size': args.batch_size,
@@ -320,7 +322,10 @@ def main():
         kwargs.update(cuda_kwargs)
 
     if not args.rep and not args.uarch_net_unseen:
-        if args.sbatch:
+        if args.pred:
+            dataset = RepDataset(cfg.dataset, cfg.test_start, cfg.test_end)
+            assert not args.sbatch
+        elif args.sbatch:
             dataset = CombinedMMBDataset(cfg, cfg.data_set_idx, cfg.test_start, cfg.test_end)
         else:
             dataset = CombinedMMDataset(cfg, cfg.data_set_idx, cfg.test_start, cfg.test_end)
@@ -335,6 +340,7 @@ def main():
     if args.sim or args.rep:
         print("Run", args.sim_length, "instructions.")
         if args.rep:
+            rep_dim = get_representation_dim(model)
             all_rep = torch.zeros(len(cfg.sim_datasets), rep_dim)
             torch.set_printoptions(threshold=1000)
         if args.save_sim:
