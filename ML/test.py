@@ -295,7 +295,9 @@ def main():
 
     assert len(args.models) == 1
     model = eval(args.models[0])
-    if not args.rep:
+    if args.rep:
+        rep_dim = get_representation_dim(model)
+    else:
         cfg_num = cfg.cfg_num
     if args.uarch_net or args.uarch_net_unseen:
         model.init_paras()
@@ -340,13 +342,12 @@ def main():
     if args.sim or args.rep:
         print("Run", args.sim_length, "instructions.")
         if args.rep:
-            rep_dim = get_representation_dim(model)
             all_rep = torch.zeros(len(cfg.sim_datasets), rep_dim)
             torch.set_printoptions(threshold=1000)
         if args.save_sim:
             res = torch.zeros(len(cfg.sim_datasets), 3, cfg_num, cfg.tgt_length)
         for i in range(len(cfg.sim_datasets)):
-            name = cfg.sim_datasets[i][0].replace(cfg.data_set_dir, '').replace(".in.mmap.norm", '')
+            name = cfg.sim_datasets[i][0].replace(cfg.data_set_dir, '').replace(".in.mmap.norm", '').replace(".in.nmmap", '')
             print(name, flush=True)
             if args.sbatch:
                 cur_dataset = MemMappedBatchDataset(cfg, cfg.sim_datasets[i], 0, args.sim_length // args.sbatch_size + 1)
@@ -355,6 +356,9 @@ def main():
             test_loader = torch.utils.data.DataLoader(cur_dataset, **kwargs)
             if args.rep:
                 all_rep[i] = get_program_representation(args, cfg, model, device, test_loader, rep_dim, name)
+                file_name = args.checkpoints.replace("checkpoints/", "res/prep_%s_%s_" % (args.cfg, name))
+                print("Save", name, "representation to", file_name)
+                torch.save(all_rep[i], file_name)
             elif args.save_sim:
                 res[i] = simulate(args, cfg, model, device, test_loader, name, cfg_num)
             else:
