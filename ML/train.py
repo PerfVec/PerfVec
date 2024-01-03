@@ -139,15 +139,16 @@ def test_sbatch_mul(args, cfg, models, device, test_loader, rank):
             ms.idx, rank, ms.total_loss), flush=True)
 
 
-def save_checkpoint(name, model, optimizer, epoch, best_loss, cfg, lr, best=False):
-    if lr != 0:
-        lr_name = '_lr' + str(lr)
-    else:
-        lr_name = ''
+def save_checkpoint(name, model, optimizer, epoch, best_loss, args, best=False):
+    extra_name = ''
+    if args.lr != 0:
+        extra_name = '_lr' + str(args.lr)
+    if args.loss != "MSE":
+        extra_name += '_lo' + args.loss
     if best:
-        name = 'checkpoints/' + generate_model_name(name) + '_' + cfg + lr_name + '_best.pt'
+        name = 'checkpoints/' + generate_model_name(name) + '_' + args.cfg + extra_name + '_best.pt'
     else:
-        name = 'checkpoints/' + generate_model_name(name, epoch) + '_' + cfg + lr_name + '.pt'
+        name = 'checkpoints/' + generate_model_name(name, epoch) + '_' + args.cfg + extra_name + '.pt'
     saved_dict = {'epoch': epoch,
                   'best_loss': best_loss,
                   'optimizer_state_dict': optimizer.state_dict()}
@@ -274,6 +275,9 @@ def main_rank(rank, args):
         i += 1
         #ori_lr = optimizer.defaults['lr']
     start_epoch = 1
+    if args.loss == "L1":
+        print("Use L1Loss.")
+        loss_fn = nn.L1Loss()
 
     for epoch in range(start_epoch, args.epochs + 1):
         if args.distributed:
@@ -302,9 +306,9 @@ def main_rank(rank, args):
                     print("Find new minimal loss", ms.cur_loss, "to replace", ms.min_loss, "of model", ms.idx)
                     ms.min_loss = ms.cur_loss
                     if not args.no_save_model:
-                        save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args.cfg, args.lr, True)
+                        save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args, True)
                 if (not args.no_save_model) and epoch % args.save_interval == 0:
-                    save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args.cfg, args.lr)
+                    save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args)
             if args.lr_step > 0:
                 ms.scheduler.step()
 
@@ -323,6 +327,7 @@ def main():
                         help='input size for training')
     parser.add_argument('--epochs', type=int, default=100, metavar='N',
                         help='number of epochs to train (default: 100)')
+    parser.add_argument('--loss', default="MSE", help='loss function')
     parser.add_argument('--lr', type=float, default=0, metavar='N',
                         help='initial learning rate')
     parser.add_argument('--wd', type=float, default=0, metavar='N',

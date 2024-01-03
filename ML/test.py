@@ -304,7 +304,7 @@ def main():
     if args.uarch_net:
         cfg_num -= 1
     load_checkpoint(args.checkpoints, model)
-    if args.uarch_net_unseen:
+    if args.uarch_net_unseen or args.pred:
         model.setup_test()
     #profile_model(cfg, model)
     device = torch.device("cuda" if use_cuda else "cpu")
