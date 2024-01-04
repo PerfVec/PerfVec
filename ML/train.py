@@ -18,9 +18,6 @@ from ML.utils import profile_model, generate_model_name
 from ML.models import *
 
 
-loss_fn = nn.MSELoss()
-
-
 class ModelSet:
     def __init__(self, idx, name, model, optimizer, scheduler):
         self.idx = idx
@@ -33,7 +30,7 @@ class ModelSet:
         self.scheduler = scheduler
 
 
-def train_mul(args, models, device, train_loader, epoch, rank):
+def train_mul(args, models, device, train_loader, loss_fn, epoch, rank):
     for ms in models:
         ms.model.train()
         ms.total_loss = 0
@@ -65,7 +62,7 @@ def train_mul(args, models, device, train_loader, epoch, rank):
             epoch, ms.idx, rank, ms.total_loss, end_t - start_t), flush=True)
 
 
-def train_sbatch_mul(args, cfg, models, device, train_loader, epoch, rank):
+def train_sbatch_mul(args, cfg, models, device, train_loader, loss_fn, epoch, rank):
     for ms in models:
         ms.model.train()
         ms.total_loss = 0
@@ -101,7 +98,7 @@ def train_sbatch_mul(args, cfg, models, device, train_loader, epoch, rank):
             epoch, ms.idx, rank, ms.total_loss, end_t - start_t), flush=True)
 
 
-def test_mul(args, models, device, test_loader, rank):
+def test_mul(args, models, device, test_loader, loss_fn, rank):
     for ms in models:
         ms.model.eval()
         ms.total_loss = 0
@@ -118,7 +115,7 @@ def test_mul(args, models, device, test_loader, rank):
             ms.idx, rank, ms.total_loss), flush=True)
 
 
-def test_sbatch_mul(args, cfg, models, device, test_loader, rank):
+def test_sbatch_mul(args, cfg, models, device, test_loader, loss_fn, rank):
     for ms in models:
         ms.model.eval()
         ms.total_loss = 0
@@ -275,9 +272,14 @@ def main_rank(rank, args):
         i += 1
         #ori_lr = optimizer.defaults['lr']
     start_epoch = 1
-    if args.loss == "L1":
+    if args.loss == "MSE":
+        loss_fn = nn.MSELoss()
+    elif args.loss == "L1":
         print("Use L1Loss.")
         loss_fn = nn.L1Loss()
+    else:
+        print("Error: %s is not a valid loss function." % args.loss)
+        exit()
 
     for epoch in range(start_epoch, args.epochs + 1):
         if args.distributed:
@@ -287,15 +289,15 @@ def main_rank(rank, args):
         #if rank == 0:
         #    print("Epoch", epoch, "with lr", lr, flush=True)
         if args.sbatch:
-            train_sbatch_mul(args, cfg, models, device, train_loader, epoch, rank)
+            train_sbatch_mul(args, cfg, models, device, train_loader, loss_fn, epoch, rank)
         else:
-            train_mul(args, models, device, train_loader, epoch, rank)
+            train_mul(args, models, device, train_loader, loss_fn, epoch, rank)
         if args.distributed:
             test_sampler.set_epoch(epoch - 1)
         if args.sbatch:
-            test_sbatch_mul(args, cfg, models, device, test_loader, rank)
+            test_sbatch_mul(args, cfg, models, device, test_loader, loss_fn, rank)
         else:
-            test_mul(args, models, device, test_loader, rank)
+            test_mul(args, models, device, test_loader, loss_fn, rank)
         for ms in models:
             if args.distributed:
                 cur_loss = torch.tensor(ms.cur_loss).to(device)
