@@ -296,7 +296,7 @@ def main():
     assert len(args.models) == 1
     model = eval(args.models[0])
     if args.rep:
-        rep_dim = get_representation_dim(model)
+        rep_dim = get_representation_dim(cfg, model)
     else:
         cfg_num = cfg.cfg_num
     if args.uarch_net or args.uarch_net_unseen:

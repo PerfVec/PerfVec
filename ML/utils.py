@@ -2,7 +2,6 @@ import numpy as np
 import torch
 from datetime import datetime
 from ptflops import get_model_complexity_info
-from CFG import seq_length, input_length
 from .models import *
 
 
@@ -54,7 +53,7 @@ def profile_model(cfg, model, para=False):
     print('{:<30}  {:<8}'.format('Number of parameters: ', params))
 
 
-def get_representation_dim(model):
-    rep = model.extract_representation(torch.zeros(1, seq_length, input_length))
+def get_representation_dim(cfg, model):
+    rep = model.extract_representation(torch.zeros(1, cfg.seq_length, cfg.input_length))
     print("Representation dimensionality is", rep.shape[2])
     return rep.shape[2]

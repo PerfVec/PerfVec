@@ -213,7 +213,7 @@ def main_rank(rank, args):
     assert len(args.models) == 1
     models = []
     model = eval(args.models[0])
-    rep_dim = get_representation_dim(model)
+    rep_dim = get_representation_dim(cfg, model)
     load_checkpoint(args.checkpoints, model)
     if args.uarch_net:
         for param in model.parameters():
