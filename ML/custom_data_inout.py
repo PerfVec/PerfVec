@@ -119,7 +119,7 @@ class MemMappedBatchDataset(Dataset):
             end = out_use_size // self.batchsize
         self.seq_length = cfg.seq_length
         self.input_length = cfg.input_length
-        if cfg.tgt_length != cfg.ori_tgt_length:
+        if hasattr(cfg, 'sel_batch_out'):
             self.sel = cfg.sel_batch_out
         else:
             self.sel = None
