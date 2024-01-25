@@ -18,6 +18,24 @@ ML: machine learning scripts for training, testing, etc.
 
 CFG: configurations of various datasets.
 
+## Example
+
+### Learn the representation of a program using a trained model
+
+1. Get the instruction execution trace using gem5.
+
+2. Generate the PerfVec model input from the gem5 instruction execution trace.
+
+`python -m DP.trace2nmmap <input trace>`
+
+3. Run the trained PerfVec model.
+
+`python -m ML.test --sbatch --no-save --sim-length=<# instructions> --batch-size=4096 --cfg=<corresponding config file in CFG> --rep --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>`
+
+<!---
+`./dp/buildQ a.txt a.sq.txt`
+-->
+
 <!---
 ## Data Processing
 ```
