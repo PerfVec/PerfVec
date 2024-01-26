@@ -120,12 +120,18 @@ class MemMappedBatchDataset(Dataset):
         self.seq_length = cfg.seq_length
         self.input_length = cfg.input_length
         if hasattr(cfg, 'sel_batch_out'):
-            self.sel = cfg.sel_batch_out
+            self.sel_out = cfg.sel_batch_out
         else:
-            self.sel = None
+            self.sel_out = None
+        if hasattr(cfg, 'sel_in'):
+            self.sel_in = cfg.sel_in
+        else:
+            self.sel_in = None
         self.start = start
         self.size = end - start
-        print("Open %s (%d %d %d)" % (cfg.get_out_name(file_name), start, end, self.size), flush=True)
+        print("Open %s (%d %d %d) (sel_in %s) (sel_out %s)" % (cfg.get_out_name(file_name), start, end, self.size,
+                                                               "yes" if self.sel_in is not None else "no",
+                                                               "yes" if self.sel_out is not None else "no"), flush=True)
 
     def __len__(self):
         return self.size
@@ -142,8 +148,10 @@ class MemMappedBatchDataset(Dataset):
         else:
             x = np.copy(self.in_arr[idx+1-self.seq_length:idx+self.batchsize, :])
         y = np.copy(self.out_arr[idx:idx+self.batchsize, :])
-        if self.sel is not None:
-            y = self.sel(y)
+        if self.sel_out is not None:
+            y = self.sel_out(y)
+        if self.sel_in is not None:
+            x = self.sel_in(x)
         x = torch.from_numpy(x.astype('f'))
         y = torch.from_numpy(y.astype('f'))
         return x, y

@@ -335,6 +335,8 @@ def main():
         if args.select:
             print("Test with different micro-architecture arrangement.")
             assert hasattr(cfg, 'sel_output')
+        else:
+            assert not hasattr(cfg, 'sel_output')
         test(args, cfg, model, device, test_loader, cfg_num)
         if not args.no_save and torch.cuda.device_count() <= 1:
             save_ts_model(cfg, args.checkpoints, model, device)
