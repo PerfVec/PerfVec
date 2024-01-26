@@ -194,6 +194,7 @@ def main_rank(rank, args):
         global_rank = args.node_rank * args.gpus + rank
         dist.init_process_group("nccl", rank=global_rank, world_size=args.world_size)
 
+    #torch.set_float32_matmul_precision('high')
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     torch.manual_seed(args.seed)
 
@@ -251,12 +252,16 @@ def main_rank(rank, args):
         if args.distributed:
             device = rank
             model = DDP(model.to(device), device_ids=[device])
+            if int(torch.__version__[0]) >= 2:
+                model = torch.compile(model)
         elif torch.cuda.device_count() > 1:
             print ('Available devices', torch.cuda.device_count())
             print ('Current cuda device', torch.cuda.current_device())
             model = nn.DataParallel(model).to(device)
         else:
             model.to(device)
+            if int(torch.__version__[0]) >= 2:
+                model = torch.compile(model)
         opt_args = {}
         if args.lr != 0:
             lr_arg = {'lr': args.lr}
