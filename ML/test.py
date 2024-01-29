@@ -205,11 +205,10 @@ def get_program_representation(args, cfg, model, device, test_loader, rep_dim, n
             if args.sbatch:
                 for i in range(args.sbatch_size):
                     cur_data = data[:,i:i+cfg.seq_length,:]
-                    #rep = model.extract_representation(cur_data)
                     _, rep = model(cur_data)
                     batch_rep_sum += torch.sum(rep, dim=0)
             else:
-                rep = model.extract_representation(data)
+                _, rep = model(data)
                 batch_rep_sum += torch.sum(rep, dim=0)
             rep_sum += batch_rep_sum
             if args.phase:

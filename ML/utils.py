@@ -55,5 +55,6 @@ def profile_model(cfg, model, para=False):
 
 def get_representation_dim(cfg, model):
     rep = model.extract_representation(torch.zeros(1, cfg.seq_length, cfg.input_length))
-    print("Representation dimensionality is", rep.shape[2])
-    return rep.shape[2]
+    assert rep.dim() == 2 and rep.shape[0] == 1
+    print("Representation dimensionality is", rep.shape[1])
+    return rep.shape[1]

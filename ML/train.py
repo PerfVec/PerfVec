@@ -253,6 +253,8 @@ def main_rank(rank, args):
             device = rank
             model = DDP(model.to(device), device_ids=[device])
             if int(torch.__version__[0]) >= 2:
+                if rank == 0:
+                    print ('Enable PyTorch 2.0 compile.')
                 model = torch.compile(model)
         elif torch.cuda.device_count() > 1:
             print ('Available devices', torch.cuda.device_count())
@@ -261,6 +263,7 @@ def main_rank(rank, args):
         else:
             model.to(device)
             if int(torch.__version__[0]) >= 2:
+                print ('Enable PyTorch 2.0 compile.')
                 model = torch.compile(model)
         opt_args = {}
         if args.lr != 0:

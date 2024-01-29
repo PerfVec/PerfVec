@@ -84,23 +84,22 @@ class InsLSTM(SeqLSTM):
   def __init__(self, nhidden, nlayers, narchs=1, nembed=0, gru=False, bi=False, norm=False, bias=True):
     super().__init__(nhidden, nlayers, narchs, nembed, gru, bi, norm, bias)
 
-  def forward(self, x):
-    x = super().forward(x)
+  def extract_representation(self, x):
+    x = super().extract_representation(x)
     return x[:, -1, :]
 
 
-class InsLSTMRep(SeqLSTM):
+class InsLSTMRep(InsLSTM):
   def __init__(self, nhidden, nlayers, narchs=1, nembed=0, gru=False, bi=False, norm=False, bias=True):
     super().__init__(nhidden, nlayers, narchs, nembed, gru, bi, norm, bias)
 
   def forward(self, x):
     rep = super().extract_representation(x)
-    rep = rep[:, -1, :]
     x = self.linear(rep)
     return x, rep
 
 
-class InsLSTMDSE(SeqLSTM):
+class InsLSTMDSE(InsLSTM):
   def __init__(self, nhidden, nlayers, narchs=1, nembed=0, gru=False, bi=False, norm=False, bias=True):
     assert not bias
     super().__init__(nhidden, nlayers, narchs, nembed, gru, bi, norm, bias)
@@ -144,7 +143,6 @@ class InsLSTMDSE(SeqLSTM):
 
   def forward(self, x):
     rep = super().extract_representation(x)
-    rep = rep[:, -1, :]
     uarch_rep = self.uarch_net(self.uarch_paras).view(self.output_num, -1)
     x = F.linear(rep, uarch_rep)
     return x
@@ -254,8 +252,8 @@ class InsEmLSTM(SeqEmLSTM):
   def __init__(self, nhidden, nlayers, narchs=1, nop=1, nmem=0, nctrl=0, nr=0, gru=False, bi=False, bias=True):
     super().__init__(nhidden, nlayers, narchs, nop, nmem, nctrl, nr, gru, bi, bias)
 
-  def forward(self, x):
-    x = super().forward(x)
+  def extract_representation(self, x):
+    x = super().extract_representation(x)
     return x[:, -1, :]
 
 
@@ -331,11 +329,10 @@ class TransformerModel(nn.Module):
         x = self.pos_encoder(x)
         #x = self.encoder(x, self.src_mask)
         x = self.encoder(x)
-        return x
+        return x[:, -1, :]
 
     def forward(self, x):
         x = self.extract_representation(x)
-        x = x[:, -1, :]
         x = self.linear(x)
         return x
 
