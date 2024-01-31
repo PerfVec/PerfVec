@@ -28,9 +28,14 @@ CFG: configurations of various datasets.
 
 `python -m DP.trace2nmmap <input trace>`
 
-3. Run the trained PerfVec model.
+3. Create a config file for the generated data.
+An example can be seen in `CFG/com_spectest_1223.py`.
+Put the input path and size in `sim_datasets`.
 
-`python -m ML.test --sbatch --no-save --sim-length=<# instructions> --batch-size=4096 --cfg=<corresponding config file in CFG> --rep --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>`
+4. Run the trained PerfVec model.
+
+`python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config file in CFG>
+  --rep --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>`
 
 <!---
 `./dp/buildQ a.txt a.sq.txt`
