@@ -23,6 +23,8 @@ CFG: configurations of various datasets.
 ### Learn the representation of a program using a trained model
 
 1. Get the instruction execution trace using gem5.
+The modified gem5 can be obtained from [https://github.com/lingda-li/gem5/tree/ml_sim](https://github.com/lingda-li/gem5/tree/ml_sim).
+Simulating a program in SE mode using this gem5 will generate two instruction trace files, `trace.txt` and `trace.sq.txt`.
 
 2. Generate the PerfVec model input from the gem5 instruction execution trace.
 
