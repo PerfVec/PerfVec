@@ -41,6 +41,12 @@ Put the input path and size in `sim_datasets`.
 `python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config file in CFG>
   --rep --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>`
 
+## Pretained Foundation Models
+
+| Model                | Link                                                              |
+|----------------------|-------------------------------------------------------------------|
+| LSTM-2-256 (default) | https://github.com/PerfVec/PerfVecDB/blob/main/LSTM_256_2_1222.pt |
+
 <!---
 `./dp/buildQ a.txt a.sq.txt`
 -->
