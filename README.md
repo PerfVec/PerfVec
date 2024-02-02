@@ -9,6 +9,8 @@ be applied in the performance prediction of any program.
 Additionally, PerfVec yields a foundation model that captures the performance
 essence of instructions, which can be directly used by developers in numerous
 performance modeling related tasks without incurring its training cost.
+More details can be found in our paper at
+[https://arxiv.org/abs/2310.16792](https://arxiv.org/abs/2310.16792).
 
 ## Folder
 
@@ -25,8 +27,10 @@ DA: data analysis scripts.
 ### Learn the representation of a program using a trained model
 
 1. Get the instruction execution trace using gem5.
-The modified gem5 can be obtained from [https://github.com/lingda-li/gem5/tree/ml_sim](https://github.com/lingda-li/gem5/tree/ml_sim).
-Simulating a program in SE mode using this gem5 will generate two instruction trace files, `trace.txt` and `trace.sq.txt`.
+The modified gem5 can be obtained from
+[https://github.com/lingda-li/gem5/tree/ml_sim](https://github.com/lingda-li/gem5/tree/ml_sim).
+Simulating a program in SE mode using this gem5 will generate two instruction
+trace files, `trace.txt` and `trace.sq.txt`.
 
 2. Generate the PerfVec model input from the gem5 instruction execution trace.
 
