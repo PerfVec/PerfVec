@@ -47,9 +47,9 @@ Put the input path and size in `sim_datasets`.
 
 ## Pretained Foundation Models
 
-| Model                | Instantiation                            | Link                                                              |
-|----------------------|------------------------------------------|-------------------------------------------------------------------|
-| LSTM-2-256 (default) | "InsLSTMRep(256,2,narchs=77,bias=False)" | https://github.com/PerfVec/PerfVecDB/blob/main/LSTM_256_2_1222.pt |
+| Model                | Instantiation                       | Link                                                              |
+|----------------------|-------------------------------------|-------------------------------------------------------------------|
+| LSTM-2-256 (default) | InsLSTM(256,2,narchs=77,bias=False) | https://github.com/PerfVec/PerfVecDB/blob/main/LSTM_256_2_1222.pt |
 
 <!---
 `./dp/buildQ a.txt a.sq.txt`

@@ -89,14 +89,14 @@ class InsLSTM(SeqLSTM):
     return x[:, -1, :]
 
 
-class InsLSTMRep(InsLSTM):
-  def __init__(self, nhidden, nlayers, narchs=1, nembed=0, gru=False, bi=False, norm=False, bias=True):
-    super().__init__(nhidden, nlayers, narchs, nembed, gru, bi, norm, bias)
+class RepExtractor(nn.Module):
+  def __init__(self, model):
+    super(RepExtractor, self).__init__()
+    self.model = model
 
   def forward(self, x):
-    rep = super().extract_representation(x)
-    x = self.linear(rep)
-    return x, rep
+    rep = self.model.extract_representation(x)
+    return rep
 
 
 class InsLSTMDSE(InsLSTM):

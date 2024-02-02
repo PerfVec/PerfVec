@@ -205,10 +205,10 @@ def get_program_representation(args, cfg, model, device, test_loader, rep_dim, n
             if args.sbatch:
                 for i in range(args.sbatch_size):
                     cur_data = data[:,i:i+cfg.seq_length,:]
-                    _, rep = model(cur_data)
+                    rep = model(cur_data)
                     batch_rep_sum += torch.sum(rep, dim=0)
             else:
-                _, rep = model(data)
+                rep = model(data)
                 batch_rep_sum += torch.sum(rep, dim=0)
             rep_sum += batch_rep_sum
             if args.phase:
@@ -273,6 +273,8 @@ def main():
                         help='do not save model')
     parser.add_argument('--save-sim', action='store_true', default=False,
                         help='save simulation results')
+    parser.add_argument('--save-rep-sep', action='store_true', default=False,
+                        help='save representations separately')
     parser.add_argument('--sbatch', action='store_true', default=False,
                         help='uses small batch training')
     parser.add_argument('--sbatch-size', type=int, default=512, metavar='N',
@@ -308,6 +310,8 @@ def main():
     if args.uarch_net_unseen or args.pred:
         model.setup_test()
     #profile_model(cfg, model)
+    if args.rep:
+        model = RepExtractor(model)
     device = torch.device("cuda" if use_cuda else "cpu")
     if torch.cuda.device_count() > 1:
         print ('Available devices', torch.cuda.device_count())
@@ -359,9 +363,10 @@ def main():
             test_loader = torch.utils.data.DataLoader(cur_dataset, **kwargs)
             if args.rep:
                 all_rep[i] = get_program_representation(args, cfg, model, device, test_loader, rep_dim, name)
-                file_name = args.checkpoints.replace("checkpoints/", "res/prep_%s_%s_" % (args.cfg, name))
-                print("Save", name, "representation to", file_name)
-                torch.save(all_rep[i], file_name)
+                if args.save_rep_sep:
+                    file_name = args.checkpoints.replace("checkpoints/", "res/prep_%s_%s_" % (args.cfg, name))
+                    print("Save", name, "representation to", file_name)
+                    torch.save(all_rep[i], file_name)
             elif args.save_sim:
                 res[i] = simulate(args, cfg, model, device, test_loader, name, cfg_num)
             else:
