@@ -18,6 +18,8 @@ ML: machine learning scripts for training, testing, etc.
 
 CFG: configurations of various datasets.
 
+DA: data analysis scripts.
+
 ## Example
 
 ### Learn the representation of a program using a trained model

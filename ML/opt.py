@@ -57,7 +57,7 @@ def load_checkpoint(name, model, training=False, optimizer=None):
 
 def main():
     # Settings
-    parser = argparse.ArgumentParser(description='Trace2Vec Optimization')
+    parser = argparse.ArgumentParser(description='PerfVec Optimization')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA')
     parser.add_argument('--int-opt', action='store_true', default=False,

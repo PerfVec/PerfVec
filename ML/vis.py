@@ -170,7 +170,7 @@ def vis(args):
 
 if __name__ == '__main__':
     # Settings
-    parser = argparse.ArgumentParser(description='Trace2Vec Visualization')
+    parser = argparse.ArgumentParser(description='PerfVec Visualization')
     parser.add_argument('--prog', action='store_true', default=False,
                         help='visualizes program representations')
     parser.add_argument('--opt', action='store_true', default=False,

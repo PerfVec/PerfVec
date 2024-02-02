@@ -5,7 +5,7 @@ import torch
 
 def main():
     # Settings
-    parser = argparse.ArgumentParser(description='Trace2Vec Pearson Correlation')
+    parser = argparse.ArgumentParser(description='PerfVec Pearson Correlation')
     parser.add_argument('--cfg', required=True, help='config file')
     parser.add_argument('--res', required=True)
     parser.add_argument('--skip', action='store_true', default=False,

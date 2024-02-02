@@ -307,7 +307,7 @@ def main_rank(rank, args):
 
 def main():
     # Training settings
-    parser = argparse.ArgumentParser(description='Trace2Vec Tuning')
+    parser = argparse.ArgumentParser(description='PerfVec Tuning')
     parser.add_argument('--cfg', required=True, help='config file')
     parser.add_argument('--uarch', action='store_true', default=False,
                         help='learn micro-architecture representations only')

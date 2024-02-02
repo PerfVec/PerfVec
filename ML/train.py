@@ -329,7 +329,7 @@ def main_rank(rank, args):
 
 def main():
     # Training settings
-    parser = argparse.ArgumentParser(description='Trace2Vec Training')
+    parser = argparse.ArgumentParser(description='PerfVec Training')
     parser.add_argument('--cfg', required=True, help='config file')
     parser.add_argument('--batch-size', type=int, default=4096, metavar='N',
                         help='input batch size (default: 4096)')

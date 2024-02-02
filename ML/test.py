@@ -247,7 +247,7 @@ def save_ts_model(cfg, name, model, device):
 
 def main():
     # Training settings
-    parser = argparse.ArgumentParser(description='Trace2Vec Testing')
+    parser = argparse.ArgumentParser(description='PerfVec Testing')
     parser.add_argument('--cfg', required=True, help='config file')
     parser.add_argument('--sim', action='store_true', default=False,
                         help='simulates traces')
