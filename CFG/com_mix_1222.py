@@ -2,8 +2,8 @@ import numpy as np
 
 # Data set configuration.
 data_set_dir = 'Data4/'
-data_set_idx = 17
-#data_set_idx = 10
+#data_set_idx = 17
+data_set_idx = 10
 ori_datasets = [
   (data_set_dir + '507.cactuBSSN_r.in.mmap.norm', 1035397081, 16511420, 16511420),
   (data_set_dir + '508.namd_r.in.mmap.norm', 1105247403, 100000000, 1105245194),
