@@ -12,16 +12,6 @@ performance modeling related tasks without incurring its training cost.
 More details can be found in our paper at
 [https://arxiv.org/abs/2310.16792](https://arxiv.org/abs/2310.16792).
 
-## Folder
-
-DP: data processing scripts.
-
-ML: machine learning scripts for training, testing, etc.
-
-CFG: configurations of various datasets.
-
-DA: data analysis scripts.
-
 ## Example
 
 ### Learn the representation of a program using a trained model
@@ -38,18 +28,35 @@ trace files, `trace.txt` and `trace.sq.txt`.
 
 3. Create a config file for the generated data.
 An example can be seen in `CFG/com_spectest_1223.py`.
-Put the input path and size in `sim_datasets`.
+Make a copy of it, and then put the input path and size in `sim_datasets`.
 
 4. Run the trained PerfVec model.
 
 `python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config file in CFG>
   --rep --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>`
 
+It will generate a representation file `res/prep_<cfg_name>_<checkpoint_name>.pt` in the format of PyTorch tensor, which can be used for performance prediction.
+
+Alternatively, you can use the following command to directly make performance prediction with a pre-trained model that includes microarchitecture representations.
+
+`python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config file in CFG>
+  --sim --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>`
+
 ## Pretained Foundation Models
 
 | Model                | Instantiation                       | Link                                                              |
 |----------------------|-------------------------------------|-------------------------------------------------------------------|
 | LSTM-2-256 (default) | InsLSTM(256,2,narchs=77,bias=False) | https://github.com/PerfVec/PerfVecDB/blob/main/LSTM_256_2_1222.pt |
+
+## Folder
+
+DP: data processing scripts.
+
+ML: machine learning scripts for training, testing, etc.
+
+CFG: configurations of various datasets.
+
+DA: data analysis scripts.
 
 <!---
 `./dp/buildQ a.txt a.sq.txt`
