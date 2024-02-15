@@ -27,13 +27,14 @@ trace files, `trace.txt` and `trace.sq.txt`.
 `python -m DP.trace2nmmap <input trace>`
 
 3. Create a config file for the generated data.
+
 An example can be seen in `CFG/com_spectest_1223.py`.
 Make a copy of it, and then put the input path and size in `sim_datasets`.
 
 4. Run the trained PerfVec model.
 
 ```
-python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config file in CFG>
+python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config file in CFG> \\
   --rep --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>
 ```
 
@@ -42,7 +43,7 @@ It will generate a representation file `res/prep_<cfg_name>_<checkpoint_name>.pt
 Alternatively, you can use the following command to directly make performance prediction with a pre-trained model that includes microarchitecture representations.
 
 ```
-python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config file in CFG>
+python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config file in CFG> \\
   --sim --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>
 ```
 
@@ -56,10 +57,15 @@ python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config
 
 4. Create a config file for the generated data.
 
+An example can be seen in `CFG/com_0922.py`.
+Make a copy of it, and then put the path and size of training data in `datasets`.
+Modify `data_set_idx` to be the length of used datasets.
+Calculate the total number of instructions, and then modify `testbatchnum`, `testbatchsize`, `validbatchnum`, and `validbatchsize` to specify the testing and validation portions.
+
 5. Train a PerfVec foundation model.
 
 ```
-python -m ML.train --cfg=<config file in CFG> --epochs=<# epochs> --train-size=<# of instructions for training>
+python -m ML.train --cfg=<config file in CFG> --epochs=<# epochs> --train-size=<# instructions for training> \\
   --batch-size=<batch size> --sbatch <model instantiation>
 ```
 
