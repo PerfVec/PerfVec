@@ -24,7 +24,7 @@ trace files, `trace.txt` and `trace.sq.txt`.
 
 2. <a name="inputgen"></a> Generate the PerfVec model input from the gem5 instruction execution trace.
 
-`python -m DP.trace2nmmap <input trace>`
+`python -m DP.trace2nmmap <trace name>`
 
 3. Create a config file for the generated data.
 An example can be seen in `CFG/com_spectest_1223.py`.
@@ -58,11 +58,12 @@ This is similar to [Step 1](#gem5) of the first example.
 For each program, first generate an input file, similar to [Step 2](#inputgen)
 of the first example.
 Then generate an output file that combines instruction latencies on all
-microarchitectures serving as prediction targets, using the following commands.
+microarchitectures serving as prediction targets, and convert it to the numpy
+memmap format used in training, using the following commands.
 
 ```
-./DP/buildComOut <input trace on uarch 1> <input trace on uarch 2> ...
-python -m DP.inst2mmap -t -l=<# instructions in output> <output of the command above>
+./DP/buildComOut <trace on uarch 1> <trace on uarch 2> ...
+python -m DP.inst2mmap -t -l=<# instructions in combined output> <combined output>
 ```
 
 4. Create a config file for the generated data.
