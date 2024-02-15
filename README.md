@@ -76,27 +76,27 @@ Then generate an output file that combines instruction latencies on all
 microarchitectures serving as prediction targets, and convert it to the numpy
 memmap format used in training, using the following commands.
 
-```
-./DP/buildComOut <trace on uarch 1> <trace on uarch 2> ...
-python -m DP.inst2mmap -t -l=<# instructions in combined output> <combined output>
-```
+  ```
+  ./DP/buildComOut <trace on uarch 1> <trace on uarch 2> ... <trace on uarch n>
+  python -m DP.inst2mmap -t -l=<# instructions in combined output> <combined output>
+  ```
 
 4. Create a config file for the generated data.
 An example can be seen in `CFG/com_0522.py`.
-Make a copy of it, and then put the path, input size, and output size of
-training data in `datasets`.
-Modify `data_set_idx` to be the length of datasets.
-Calculate the total number of instructions, and then modify `testbatchnum`,
-`testbatchsize`, `validbatchnum`, and `validbatchsize` to specify the testing
-and validation portions.
-Also modify `cfg_num` to be the number of microarchitectures.
+The following information is needed in the config file.
+  1. Put the path, input size, and output size of all training programs in `datasets`.
+  2. Modify `data_set_idx` to be the length of datasets.
+  3. Calculate the total number of instructions, and then modify
+  `testbatchnum`, `testbatchsize`, `validbatchnum`, and `validbatchsize` to
+  specify the testing and validation portions.
+  4. Modify `cfg_num` to be the number of microarchitectures.
 
 5. Train a PerfVec foundation model.
 See `ML/models.py` for various model options.
 
 ```
-python -m ML.train --cfg=<config file in CFG> --epochs=<# epochs> --train-size=<# instructions for training> \\
-  --batch-size=<batch size> --sbatch <model instantiation>
+python -m ML.train --cfg=<config file in CFG> --train-size=<# instructions for training> \\
+  --epochs=<# epochs> --batch-size=<batch size> --sbatch <model instantiation>
 ```
 
 ## Pretained Foundation Models
@@ -105,7 +105,7 @@ python -m ML.train --cfg=<config file in CFG> --epochs=<# epochs> --train-size=<
 |----------------------|-------------------------------------|-------------------------------------------------------------------|
 | LSTM-2-256 (default) | InsLSTM(256,2,narchs=77,bias=False) | https://github.com/PerfVec/PerfVecDB/blob/main/LSTM_256_2_1222.pt |
 
-## Folder
+## Code Structure
 
 DP: data processing scripts.
 To build these scripts, `cd DP; make`
@@ -117,31 +117,6 @@ CFG: configurations of various datasets.
 DA: data analysis scripts.
 
 <!---
-`./dp/buildQ a.txt a.sq.txt`
--->
-
-<!---
-## Data Processing
-```
-source setup.sh
-```
-
-## Data Processing
-
-### Combine data set.
-```
-python -m DP.combine_mmap -n <number of files>
-```
-
-### Calculate data set normalization factors.
-```
-python -m DP.norm
-```
-
-## Datasets
-
-0: cache access levels
-1: reuse distance
 -->
 
 ## Contact
