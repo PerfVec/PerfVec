@@ -12,17 +12,17 @@ performance modeling related tasks without incurring the training cost.
 More details can be found in our paper at
 [https://arxiv.org/abs/2310.16792](https://arxiv.org/abs/2310.16792).
 
-## Example
+## Use Cases
 
 ### <a name="learnrep"></a> Learning a program representation using a pretrained foundation model
 
-<a name="gem5"></a> 1. Get the instruction execution trace using gem5.
+1. <a name="gem5"></a> Get the instruction execution trace using gem5.
 The modified gem5 can be obtained from
 [https://github.com/lingda-li/gem5/tree/ml_sim](https://github.com/lingda-li/gem5/tree/ml_sim).
 Simulating a program in SE mode using this gem5 will generate two instruction
 trace files, `trace.txt` and `trace.sq.txt`.
 
-<a name="inputgen"></a> 2. Generate the PerfVec model input from the gem5 instruction execution trace.
+2. <a name="inputgen"></a> Generate the PerfVec model input from the gem5 instruction execution trace.
 
 `python -m DP.trace2nmmap <input trace>`
 
@@ -57,11 +57,11 @@ This is similar to [Step 1](#gem5) of the first example.
 3. Generate a training dataset from all gem5 instruction execution traces.
 For each program, first generate an input file, similar to [Step 2](#inputgen)
 of the first example.
-Then generate an output file that combines to-be-predicted instruction
-latencies on all microarchitectures using the following commands.
+Then generate an output file that combines instruction latencies on all
+microarchitectures serving as prediction targets, using the following commands.
 
 ```
-./DP/buildComOut <input trace1> <input trace2> ...
+./DP/buildComOut <input trace on uarch 1> <input trace on uarch 2> ...
 python -m DP.inst2mmap -t -l=<# instructions in output> <output of the command above>
 ```
 
@@ -130,5 +130,5 @@ python -m DP.norm
 
 ## Contact
 
-Please leave your questions in GitHub issues or direct them to [Lingda Li](lli@bnl.gov).
+Please leave your questions in GitHub issues or direct them to [Lingda Li](mailto:lli@bnl.gov).
 
