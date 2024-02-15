@@ -10,7 +10,7 @@ Additionally, PerfVec yields foundation models that captures the performance
 essence of instructions, which can be directly used by developers in numerous
 performance modeling related tasks without incurring the training cost.
 More details can be found in our paper at
-[https://arxiv.org/abs/2310.16792].
+[https://arxiv.org/abs/2310.16792](https://arxiv.org/abs/2310.16792).
 
 ## Use Cases
 
@@ -18,7 +18,7 @@ More details can be found in our paper at
 
 1. <a name="gem5"></a> Get the instruction execution trace using gem5.
 The modified gem5 can be obtained from
-[https://github.com/lingda-li/gem5/tree/ml_sim].
+[https://github.com/lingda-li/gem5/tree/ml_sim](https://github.com/lingda-li/gem5/tree/ml_sim).
 Simulating a program in SE mode using this gem5 will generate two instruction
 trace files, `trace.txt` and `trace.sq.txt`.
 
@@ -31,19 +31,13 @@ An example can be seen in `CFG/com_spectest_1223.py`.
 Make a copy of it, and then put the input path and size in `sim_datasets`.
 
 4. Run the trained PerfVec model.
+The following command will generate a representation file
+`res/prep_<cfg_name>_<checkpoint_name>.pt` in the format of PyTorch tensor,
+which can be used for performance prediction.
 
     ```
     python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config name> \\
       --rep --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>
-    ```
-
-It will generate a representation file `res/prep_<cfg_name>_<checkpoint_name>.pt` in the format of PyTorch tensor, which can be used for performance prediction.
-
-Alternatively, you can use the following command to directly make performance prediction with a pre-trained model that includes microarchitecture representations.
-
-    ```
-    python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config name> \\
-      --sim --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>
     ```
 
 ### Making performance prediction
@@ -59,6 +53,13 @@ Put the program representation file in `dataset`.
     ```
     python -m ML.test --no-save --cfg=<config name> --pred \\
       --checkpoints=<microarchitecture representation checkpoint> "Predictor(cfg,bias=True)"
+    ```
+
+    Alternatively, you can use the following command to directly make performance prediction from an instruction trace with a pre-trained model that includes microarchitecture representations.
+
+    ```
+    python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config name> \\
+      --sim --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>
     ```
 
 ### Training a foundation model
