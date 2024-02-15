@@ -46,6 +46,21 @@ python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config
   --sim --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>
 ```
 
+### Making performance prediction
+
+With both program and microarchitecture representations, PerfVec can predict the performance when a program runs on a microarchitecture.
+
+1. Create a config file for the generated data.
+An example can be seen in `CFG/rep_spectest_0124.py`.
+Put the program representation file in `dataset`.
+
+2. Make execution time prediction using the following command.
+
+```
+python -m ML.test --no-save --cfg=<config file in CFG> --pred \\
+  --checkpoints=<microarchitecture representation checkpoint> "Predictor(cfg,bias=True)"
+```
+
 ### Training a foundation model
 
 1. Pick programs for training.
