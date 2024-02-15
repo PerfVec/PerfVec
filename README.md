@@ -6,15 +6,15 @@ representations.
 Once learned, a program representation can be used to predict its performance
 on any microarchitecture, and likewise, a microarchitecture representation can
 be applied in the performance prediction of any program.
-Additionally, PerfVec yields a foundation model that captures the performance
+Additionally, PerfVec yields foundation models that captures the performance
 essence of instructions, which can be directly used by developers in numerous
-performance modeling related tasks without incurring its training cost.
+performance modeling related tasks without incurring the training cost.
 More details can be found in our paper at
 [https://arxiv.org/abs/2310.16792](https://arxiv.org/abs/2310.16792).
 
 ## Example
 
-### Learn the representation of a program using a trained model
+### Learning the representation of a program using a pretrained foundation model
 
 1. Get the instruction execution trace using gem5.
 The modified gem5 can be obtained from
@@ -32,15 +32,36 @@ Make a copy of it, and then put the input path and size in `sim_datasets`.
 
 4. Run the trained PerfVec model.
 
-`python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config file in CFG>
-  --rep --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>`
+```
+python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config file in CFG>
+  --rep --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>
+```
 
 It will generate a representation file `res/prep_<cfg_name>_<checkpoint_name>.pt` in the format of PyTorch tensor, which can be used for performance prediction.
 
 Alternatively, you can use the following command to directly make performance prediction with a pre-trained model that includes microarchitecture representations.
 
-`python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config file in CFG>
-  --sim --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>`
+```
+python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config file in CFG>
+  --sim --checkpoints=<pretrained model checkpoint> <pretrained model instantiation>
+```
+
+### Training a foundation model
+
+1. Pick programs for training.
+
+2. Get their instruction execution traces on many sampled architectures using gem5.
+
+3. Generate a training dataset from all gem5 instruction execution traces.
+
+4. Create a config file for the generated data.
+
+5. Train a PerfVec foundation model.
+
+```
+python -m ML.train --cfg=<config file in CFG> --epochs=<# epochs> --train-size=<# of instructions for training>
+  --batch-size=<batch size> --sbatch <model instantiation>
+```
 
 ## Pretained Foundation Models
 
@@ -85,3 +106,8 @@ python -m DP.norm
 0: cache access levels
 1: reuse distance
 -->
+
+## Contact
+
+Please leave your questions in GitHub issues or direct them to [Lingda Li](lli@bnl.gov).
+
