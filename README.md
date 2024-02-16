@@ -42,20 +42,24 @@ which can be used for performance prediction.
 
 ### Making performance prediction
 
-With both program and microarchitecture representations, PerfVec can predict the performance when a program runs on a microarchitecture.
+With both program and microarchitecture representations, PerfVec can predict
+the performance when a program runs on a microarchitecture.
 
 1. Create a config file for the generated data.
 An example can be seen in `CFG/rep_spectest_0124.py`.
 Put the program representation file in `dataset`.
 
-2. Make execution time prediction using the following command.
+2. Make execution time prediction with a pre-trained model that includes
+microarchitecture representations using the following command.
 
     ```
     python -m ML.test --no-save --cfg=<config name> --pred \\
       --checkpoints=<microarchitecture representation checkpoint> "Predictor(cfg,bias=True)"
     ```
 
-    Alternatively, you can use the following command to directly make performance prediction from an instruction trace with a pre-trained model that includes microarchitecture representations.
+    Alternatively, you can use the following command to make performance
+    prediction directly from an instruction trace instead of program
+    representations.
 
     ```
     python -m ML.test --sbatch --no-save --sim-length=<# instructions> --cfg=<config name> \\
