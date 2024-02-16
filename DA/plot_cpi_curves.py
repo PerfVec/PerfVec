@@ -12,14 +12,16 @@ import pylab
 def extract_data(filename, interval=1, xmax=1, skip=0):
   data = torch.load(filename, map_location=torch.device('cpu'))
   data = data.detach().numpy()
+  print(data.shape)
   size = data.shape[0] - skip
   true = data[:, 0, 0]
   pred = data[:, 1, 0]
   #print(true)
   #print(pred)
   assert size % interval == 0 and interval > 0
-  jump = xmax / (size / interval)
-  x = np.arange(0,xmax,jump)
+  jump = xmax / (190.0 / interval)
+  xmax_true = jump * size / interval
+  x = np.arange(0,xmax_true,jump)
   y1 = true[skip::interval]
   y2 = pred[skip::interval]
   for i in range(1, interval):
@@ -31,7 +33,10 @@ def extract_data(filename, interval=1, xmax=1, skip=0):
 
 
 def plot_cpi_curves(args, for_slides=False):
-  output_name = args[0][0:3] + '_cpis'
+  if len(args[0]) > 4 and args[0][3] == '.':
+    output_name = args[0][0:3] + '_cpis'
+  else:
+    output_name = args[0] + '_cpis'
   fig_h = 6
   mpl.rcParams['text.usetex'] = True
   font = {'size' : 36}

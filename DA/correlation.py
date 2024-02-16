@@ -1,6 +1,7 @@
 import argparse
 import importlib
 import torch
+#from scipy import stats
 
 
 def main():
@@ -36,6 +37,10 @@ def main():
     output = output.reshape(1, -1)
     pc = torch.corrcoef(torch.cat((target, output), 0))
     print("IPC Pearson correlation coefficient matrix:", pc)
+    #target = target.reshape(-1)
+    #output = output.reshape(-1)
+    #pc = stats.pearsonr(target.detach().numpy(), output.detach().numpy())
+    #print("IPC Pearson correlation coefficient matrix:", pc)
 
 
 if __name__ == '__main__':
