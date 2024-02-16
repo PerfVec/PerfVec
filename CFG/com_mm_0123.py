@@ -22,11 +22,11 @@ def get_out_name(name):
 feature_format = np.float32
 target_format = np.uint16
 if data_set_idx == 8:
-  # total batch number is  / 4096 = 
-  testbatchnum = 0
+  # total batch number is 2,012,726,267 / 4096 = 491,388.25
+  testbatchnum = 475000
   testbatchsize = 1024
-  validbatchnum = 0
-  validbatchsize = 0
+  validbatchnum = 450000
+  validbatchsize = 25000
 
 ori_batch_size = 4096
 test_start = testbatchnum * ori_batch_size
@@ -47,4 +47,9 @@ def sel_batch_out(y):
   #y = np.concatenate((y[:, :, 0:2], y[:, :, 6:ori_tgt_length]), axis=2).reshape(-1, cfg_num * tgt_length)
   y = y[:, :, 2]
   #y = np.concatenate((y[:, :, 0:2], y[:, :, 6:ori_tgt_length]), axis=2).reshape(-1, cfg_num * tgt_length)
+  return y
+
+def sel_output(y):
+  y = y.reshape((-1, 77, tgt_length))
+  y = y[:, 70, :]
   return y

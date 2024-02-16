@@ -2,7 +2,8 @@ import numpy as np
 
 # Data set configuration.
 data_set_dir = 'Data_npb/'
-data_set_idx = 9
+#data_set_idx = 9
+data_set_idx = 4
 datasets = [
   (data_set_dir + 'bt.S.in.mmap.norm', 393218190, 118488715),
   (data_set_dir + 'cg.S.in.mmap.norm', 324132434, 63506089),
@@ -29,6 +30,13 @@ if data_set_idx == 9:
   testbatchsize = 1024
   validbatchnum = 180000
   validbatchsize = 10000
+elif data_set_idx == 4:
+  # total batch number is 397,036,430 / 4096 = 96,932.72
+  # training set size = 90000 * 4096 = 368640000
+  testbatchnum = 95000
+  testbatchsize = 1024
+  validbatchnum = 90000
+  validbatchsize = 5000
 
 ori_batch_size = 4096
 test_start = testbatchnum * ori_batch_size
