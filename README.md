@@ -21,6 +21,7 @@ The modified gem5 can be obtained from
 [https://github.com/lingda-li/gem5/tree/ml_sim](https://github.com/lingda-li/gem5/tree/ml_sim).
 Simulating a program in SE mode using this gem5 will generate two instruction
 trace files, `trace.txt` and `trace.sq.txt`.
+Detailed gem5 instructions can be found at [Tutorials/gem5.md](Tutorials/gem5.md).
 
 2. <a name="inputgen"></a> Generate the PerfVec model input from the gem5 instruction execution trace.
 

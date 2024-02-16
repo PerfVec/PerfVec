@@ -45,7 +45,7 @@ if __name__ == '__main__':
     start = int(sys.argv[2])
   else:
     start = 0
-  stats = np.load("Data4/stats.npz")
+  stats = np.load("Tutorials/stats.npz")
   mean = stats['mean']
   std = stats['std']
   std[std == 0.0] = 1.0
