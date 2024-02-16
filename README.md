@@ -16,12 +16,14 @@ More details can be found in our paper at
 
 ### <a name="learnrep"></a> Learning a program representation using a pretrained foundation model
 
+A more concrete step-by-step example can be found in
+[Tutorials/learn_rep.md](Tutorials/learn_rep.md).
+
 1. <a name="gem5"></a> Get the instruction execution trace using gem5.
 The modified gem5 can be obtained from
 [https://github.com/lingda-li/gem5/tree/ml_sim](https://github.com/lingda-li/gem5/tree/ml_sim).
 Simulating a program in SE mode using this gem5 will generate two instruction
 trace files, `trace.txt` and `trace.sq.txt`.
-Detailed gem5 instructions can be found at [Tutorials/gem5.md](Tutorials/gem5.md).
 
 2. <a name="inputgen"></a> Generate the PerfVec model input from the gem5 instruction execution trace.
 
