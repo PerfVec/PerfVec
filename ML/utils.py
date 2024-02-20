@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.nn as nn
 from datetime import datetime
 from ptflops import get_model_complexity_info
 from .models import *
@@ -58,3 +59,15 @@ def get_representation_dim(cfg, model):
     assert rep.dim() == 2 and rep.shape[0] == 1
     print("Representation dimensionality is", rep.shape[1])
     return rep.shape[1]
+
+
+def NormMSELoss(inp, target, delta=0.1):
+  norm_inp = inp / (target + delta)
+  norm_target = target / (target + delta)
+  return nn.MSELoss(norm_inp, norm_target)
+
+
+def NormL1Loss(inp, target, delta=0.1):
+  norm_inp = inp / (target + delta)
+  norm_target = target / (target + delta)
+  return nn.L1Loss(norm_inp, norm_target)

@@ -14,7 +14,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim.lr_scheduler import StepLR
 
 from ML.custom_data import *
-from ML.utils import profile_model, generate_model_name
+from ML.utils import *
 from ML.models import *
 
 
@@ -285,9 +285,14 @@ def main_rank(rank, args):
     elif args.loss == "L1":
         print("Use L1Loss.")
         loss_fn = nn.L1Loss()
+    elif args.loss == "NMSE":
+        print("Use normalized MSELoss.")
+        loss_fn = NormMSELoss()
+    elif args.loss == "NL1":
+        print("Use normalized L1Loss.")
+        loss_fn = NormL1Loss()
     else:
-        print("Error: %s is not a valid loss function." % args.loss)
-        exit()
+        raise AttributeError("%s is an invalid loss function." % args.loss)
 
     for epoch in range(start_epoch, args.epochs + 1):
         if args.distributed:
