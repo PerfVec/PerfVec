@@ -8,7 +8,7 @@ and comment out `from .custom_data_inout import *` in
 [ML/custom_data.py](../ML/custom_data.py).
 
 ```
-python -m ML.test --sbatch --no-save --sim-length=1000000000 --cfg=mm_cfg \\
+python -m ML.test --no-test --sbatch --no-save --sim-length=1000000000 --cfg=mm_cfg \\
   --sim --checkpoints=checkpoints/LSTM_256_2_1222.pt "InsLSTM(256,2,narchs=77,bias=False)"
 ```
 

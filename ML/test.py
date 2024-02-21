@@ -253,6 +253,8 @@ def main():
                         help='simulates traces')
     parser.add_argument('--rep', action='store_true', default=False,
                         help='extracts program representations')
+    parser.add_argument('--no-test', action='store_true', default=False,
+                        help='does not perform standard testing')
     parser.add_argument('--uarch', action='store_true', default=False,
                         help='tests unseen micro-architectures')
     parser.add_argument('--uarch-net', action='store_true', default=False,
@@ -328,7 +330,8 @@ def main():
                        'pin_memory': True}
         kwargs.update(cuda_kwargs)
 
-    if not args.rep and not args.uarch_net_unseen:
+    do_test = not args.no_test and not args.rep and not args.uarch_net_unseen
+    if do_test:
         if args.pred:
             dataset = RepDataset(cfg.dataset, cfg.test_start, cfg.test_end)
             assert not args.sbatch

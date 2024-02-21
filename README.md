@@ -97,15 +97,15 @@ For each program that is intended to be used in training or testing, do the foll
 5. Create a config file for the generated data.
 An example can be seen in `CFG/com_0522.py`.
 The following information is needed in the config file.
-    * Put the path, input size, and output size of all training programs in `datasets`.
-    * Modify `data_set_idx` to be the length of datasets.
-    * Calculate the total number of instructions, and then modify
+    * List the name, input size, and output size of all programs in `datasets`.
+    * Modify `data_set_idx` to be the number of programs.
+    * Calculate the total number of entries (i.e., sum output sizes), and then modify
     `testbatchnum`, `testbatchsize`, `validbatchnum`, and `validbatchsize` to
     specify the testing and validation portions.
     * Modify `cfg_num` to be the number of microarchitectures.
 
 6. Train a PerfVec foundation model.
-See `ML/models.py` for various model options.
+See `ML/models.py` for various model options, or implement your own.
 
     ```
     python -m ML.train --cfg=<config name> --train-size=<# instructions for training> \\
