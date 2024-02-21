@@ -1,7 +1,7 @@
 import numpy as np
 
 # Fill in the gem5 path below.
-data_set_dir = '<path to gem5>'
+data_set_dir = '<path to gem5>' + '/'
 sim_datasets = [
   # Fill in the number of instructions in the trace below.
   (data_set_dir + 'trace.in.nmmap', <instruction number>)

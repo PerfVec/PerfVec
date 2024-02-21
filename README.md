@@ -81,19 +81,20 @@ Any programs can be used theorectically, and we use SPEC CPU 2017 benchmarks in 
 2. Get their instruction execution traces on many sampled architectures using gem5.
 This is similar to [Step 1](#gem5) of the first example.
 
-3. Generate a training dataset from all gem5 instruction execution traces.
-For each program, first generate an input file, similar to [Step 2](#inputgen)
-of the first example.
-Then generate an output file that combines instruction latencies on all
-microarchitectures serving as prediction targets, and convert it to the numpy
-memmap format used in training, using the following commands.
+3. Generate a dataset for PerfVec.
+For each program that is intended to be used in training or testing, do the following.
+    * Generate an input file. The process is identical to [Step 2](#inputgen) of the first example.
+    * Generate an output file that combines instruction latencies on all
+    microarchitectures which serves as prediction targets, and convert it to
+    the numpy memmap format used in training, using the following commands.
 
-    ```
-    ./DP/buildComOut <trace on uarch 1> <trace on uarch 2> ... <trace on uarch n>
-    python -m DP.inst2mmap -t -l=<# instructions in combined output> <combined output>
-    ```
+        ```
+        ./DP/buildComOut <trace on uarch 1> <trace on uarch 2> ... <trace on uarch n>
+        python -m DP.inst2mmap -t -l=<# instructions in combined output> <combined output>
+        ```
 
-4. Create a config file for the generated data.
+
+5. Create a config file for the generated data.
 An example can be seen in `CFG/com_0522.py`.
 The following information is needed in the config file.
     * Put the path, input size, and output size of all training programs in `datasets`.
@@ -103,7 +104,7 @@ The following information is needed in the config file.
     specify the testing and validation portions.
     * Modify `cfg_num` to be the number of microarchitectures.
 
-5. Train a PerfVec foundation model.
+6. Train a PerfVec foundation model.
 See `ML/models.py` for various model options.
 
     ```

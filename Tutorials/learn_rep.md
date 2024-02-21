@@ -30,6 +30,8 @@ Then copy it to the CFG folder: `cp Tutorials/mm_cfg.py CFG`.
 
 ```
 wget https://github.com/PerfVec/PerfVecDB/raw/main/LSTM_256_2_1222.pt
+mkdir checkpoints
+mv LSTM_256_2_1222.pt checkpoints/
 ```
 
 6. Run the pretrained PerfVec model to learn and combine instruction
@@ -40,7 +42,7 @@ import *` and comment out `from .custom_data_inout import *` in
 
 ```
 python -m ML.test --sbatch --no-save --sim-length=1000000000 --cfg=mm_cfg \\
-  --rep --checkpoints=LSTM_256_2_1222.pt "InsLSTM(256,2,narchs=77,bias=False)"
+  --rep --checkpoints=checkpoints/LSTM_256_2_1222.pt "InsLSTM(256,2,narchs=77,bias=False)"
 ```
 
 This command will generate a representation file
