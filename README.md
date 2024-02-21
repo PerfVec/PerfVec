@@ -71,6 +71,9 @@ microarchitecture representations using the following command.
 
 ### Training a foundation model
 
+
+This is for more advanced users.
+
 1. Pick programs for training.
 Any programs can be used theorectically, and we use SPEC CPU 2017 benchmarks in the paper.
 
@@ -112,6 +115,10 @@ See `ML/models.py` for various model options.
 | Model                | Instantiation                       | Link                                                              |
 |----------------------|-------------------------------------|-------------------------------------------------------------------|
 | LSTM-2-256 (default) | InsLSTM(256,2,narchs=77,bias=False) | https://github.com/PerfVec/PerfVecDB/blob/main/LSTM_256_2_1222.pt |
+
+## Requirement
+
+PyTorch, numpy, ptflops
 
 ## Code Structure
 

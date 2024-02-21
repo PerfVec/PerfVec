@@ -18,10 +18,11 @@ python -m DP.trace2nmmap <path to gem5>/trace.txt
 ```
 
 This command produces a file named `<path to gem5>/trace.in.nmmap` and outputs
-the number of instructions it include.
+the number of instructions it includes.
 
 4. Create a config file for the generated data.
-Modify [mm_cfg.py](mm_cfg.py) to fill in the number of instructions and gem5 path.
+Modify [mm_cfg.py](mm_cfg.py) to fill in the number of instructions in the
+trace and gem5 path.
 Then copy it to the CFG folder: `cp Tutorials/mm_cfg.py CFG`.
 
 5. Download the pretrained PerfVec model from
@@ -32,6 +33,9 @@ wget https://github.com/PerfVec/PerfVecDB/raw/main/LSTM_256_2_1222.pt
 ```
 
 6. Run the trained PerfVec model.
+Before executing the following command, remove `#` before `from .custom_data_in
+import *` and comment out `from .custom_data_inout import *` in
+[ML/custom_data.py](../ML/custom_data.py).
 
 ```
 python -m ML.test --sbatch --no-save --sim-length=1000000000 --cfg=mm_cfg \\
