@@ -25,5 +25,5 @@ scons -j4 build/ARM/gem5.opt
 Use a simple matrix multiplication program as an example:
 
 ```
-./build/ARM/gem5.opt configs/example/arm/starter_se.py --cpu=timing <path to PerfVec>/Tutorials/mm 8 8 8
+./build/ARM/gem5.opt configs/example/arm/starter_se.py --cpu=timing "<path to PerfVec>/Tutorials/mm 8 8 8"
 ```

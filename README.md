@@ -16,7 +16,7 @@ More details can be found in our paper at
 
 ### <a name="learnrep"></a> Learning a program representation using a pretrained foundation model
 
-A more concrete step-by-step example can be found in
+A concrete step-by-step example can be found in
 [Tutorials/learn_rep.md](Tutorials/learn_rep.md).
 
 1. <a name="gem5"></a> Get the instruction execution trace using gem5.
@@ -47,6 +47,8 @@ which can be used for performance prediction.
 
 With both program and microarchitecture representations, PerfVec can predict
 the performance when a program runs on a microarchitecture.
+A concrete step-by-step example can be found in
+[Tutorials/predict.md](Tutorials/predict.md).
 
 1. Create a config file for the generated data.
 An example can be seen in `CFG/rep_spectest_0124.py`.
@@ -70,7 +72,6 @@ microarchitecture representations using the following command.
     ```
 
 ### Training a foundation model
-
 
 This is for more advanced users.
 
@@ -118,12 +119,12 @@ See `ML/models.py` for various model options.
 
 ## Requirement
 
-PyTorch, numpy, ptflops
+Python 3, PyTorch, numpy, ptflops
 
 ## Code Structure
 
-DP: data processing scripts.
-To build these scripts, `cd DP; make`
+DP: C++ and Python data processing scripts.
+To build these scripts, `cd DP; make in; make out`
 
 ML: machine learning scripts for training, testing, etc.
 

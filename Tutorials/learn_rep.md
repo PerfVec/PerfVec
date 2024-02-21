@@ -7,13 +7,13 @@
 ```
 cd <path to PerfVec>
 source setup.sh
-cd DP; make
-cd ..
+cd DP; make in; cd ..
 ```
 
 3. Generate the PerfVec model input from the gem5 instruction execution trace.
 
 ```
+mv <path to gem5>/sq.trace.txt <path to gem5>/trace.sq.txt
 python -m DP.trace2nmmap <path to gem5>/trace.txt
 ```
 
@@ -32,7 +32,8 @@ Then copy it to the CFG folder: `cp Tutorials/mm_cfg.py CFG`.
 wget https://github.com/PerfVec/PerfVecDB/raw/main/LSTM_256_2_1222.pt
 ```
 
-6. Run the trained PerfVec model.
+6. Run the pretrained PerfVec model to learn and combine instruction
+representations.
 Before executing the following command, remove `#` before `from .custom_data_in
 import *` and comment out `from .custom_data_inout import *` in
 [ML/custom_data.py](../ML/custom_data.py).
@@ -44,4 +45,4 @@ python -m ML.test --sbatch --no-save --sim-length=1000000000 --cfg=mm_cfg \\
 
 This command will generate a representation file
 `res/prep_mm_cfg_LSTM_256_2_1222.pt` in the format of PyTorch tensor, which can
-be used for performance prediction.
+be used for performance prediction and analysis.
