@@ -55,7 +55,7 @@ def train_mul(args, models, device, train_loader, loss_fn, epoch, rank):
         print('', flush=True)
     end_t = time.time()
     train_print(args, models, device, epoch, rank,
-                len(train_loader) * args.batch_size, end_t - start_t):
+        len(train_loader) * args.batch_size, end_t - start_t)
 
 
 def train_sbatch_mul(args, cfg, models, device, train_loader, loss_fn, epoch, rank):
@@ -86,27 +86,28 @@ def train_sbatch_mul(args, cfg, models, device, train_loader, loss_fn, epoch, ra
         print('', flush=True)
     end_t = time.time()
     train_print(args, models, device, epoch, rank,
-                len(train_loader) * args.batch_size * args.sbatch_size, end_t - start_t):
+        len(train_loader) * args.batch_size * args.sbatch_size, end_t - start_t)
 
 
 def train_print(args, models, device, epoch, rank, size, time):
   for ms in models:
     ms.train_loss /= size
     if args.distributed:
-      if rank == 0:
-        gather_list = [torch.zeros(1) for _ in range(args.world_size)]
       train_loss = torch.tensor(ms.train_loss).to(device)
-      dist.gather(train_loss, gather_list, dst=0)
       if rank == 0:
+        gather_list = [torch.zeros_like(train_loss) for _ in range(args.world_size)]
+        dist.gather(train_loss, gather_list, dst=0)
         avg_loss = torch.mean(torch.stack(gather_list))
-        print('Train Epoch {} {}: \tLoss: {:.6f} ({}) \tTime: {:.1f} s'.format(
-            epoch, ms.idx, avg_loss.item(), tensorlist2str(gather_list), time), flush=True)
+        print('Train {} at Epoch {}: \tLoss: {:.6f} ({}) \tTime: {:.1f} s'.format(
+            ms.idx, epoch, avg_loss.item(), tensorlist2str(gather_list), time), flush=True)
+      else:
+        dist.gather(train_loss, dst=0)
     else:
-      print('Train Epoch {} {}: \tLoss: {:.6f} \tTime: {:.1f} s'.format(
-          epoch, ms.idx, ms.train_loss, time), flush=True)
+      print('Train {} at Epoch {}: \tLoss: {:.6f} \tTime: {:.1f} s'.format(
+          ms.idx, epoch, ms.train_loss, time), flush=True)
 
 
-def test_mul(args, models, device, test_loader, loss_fn, rank):
+def test_mul(args, models, device, test_loader, loss_fn, epoch, rank):
     for ms in models:
         ms.model.eval()
         ms.test_loss = 0
@@ -118,14 +119,15 @@ def test_mul(args, models, device, test_loader, loss_fn, rank):
                 output = ms.model(data)
                 ms.test_loss += loss_fn(output, target).item()
     end_t = time.time()
-    test_postprocess(args, models, device, rank,
-        len(test_loader) * args.batch_size, end_t - start_t):
+    test_postprocess(args, models, device, epoch, rank,
+        len(test_loader) * args.batch_size, end_t - start_t)
 
 
-def test_sbatch_mul(args, cfg, models, device, test_loader, loss_fn, rank):
+def test_sbatch_mul(args, cfg, models, device, test_loader, loss_fn, epoch, rank):
     for ms in models:
         ms.model.eval()
         ms.test_loss = 0
+    start_t = time.time()
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
@@ -135,23 +137,25 @@ def test_sbatch_mul(args, cfg, models, device, test_loader, loss_fn, rank):
                 for ms in models:
                     output = ms.model(cur_data)
                     ms.test_loss += loss_fn(output, cur_target).item()
-    test_postprocess(args, models, device, rank,
-        len(test_loader) * args.batch_size * args.sbatch_size, end_t - start_t):
+    end_t = time.time()
+    test_postprocess(args, models, device, epoch, rank,
+        len(test_loader) * args.batch_size * args.sbatch_size, end_t - start_t)
 
 
-def test_postprocess(args, models, device, rank, size, time):
+def test_postprocess(args, models, device, epoch, rank, size, time):
   for ms in models:
     ms.test_loss /= size
     if args.distributed:
-      if rank == 0:
-        gather_list = [torch.zeros(1) for _ in range(args.world_size)]
       test_loss = torch.tensor(ms.test_loss).to(device)
-      dist.gather(test_loss, gather_list, dst=0)
       if rank == 0:
+        gather_list = [torch.zeros_like(test_loss) for _ in range(args.world_size)]
+        dist.gather(test_loss, gather_list, dst=0)
         avg_loss = torch.mean(torch.stack(gather_list))
         ms.test_loss = avg_loss.item()
         print('Test {}: \tLoss: {:.6f} ({}) \tTime: {:.1f} s'.format(
             ms.idx, ms.test_loss, tensorlist2str(gather_list), time), flush=True)
+      else:
+        dist.gather(test_loss, dst=0)
     else:
       print('Test {}: \tLoss: {:.6f} \tTime: {:.1f} s'.format(
           ms.idx, ms.test_loss, time), flush=True)
@@ -308,7 +312,8 @@ def main_rank(rank, args):
         scheduler = None
         if args.lr_step > 0:
             scheduler = StepLR(optimizer, step_size=args.lr_step)
-            print ('Use a scheduler with a step of %s.' % args.lr_step)
+            if rank == 0:
+                print ('Use a scheduler with a step of %s.' % args.lr_step)
         models.append(ModelSet(i, name, model, optimizer, scheduler))
         i += 1
         #ori_lr = optimizer.defaults['lr']
@@ -338,9 +343,9 @@ def main_rank(rank, args):
         if args.distributed:
             test_sampler.set_epoch(epoch - 1)
         if args.sbatch:
-            test_sbatch_mul(args, cfg, models, device, test_loader, loss_fn, rank)
+            test_sbatch_mul(args, cfg, models, device, test_loader, loss_fn, epoch, rank)
         else:
-            test_mul(args, models, device, test_loader, loss_fn, rank)
+            test_mul(args, models, device, test_loader, loss_fn, epoch, rank)
         for ms in models:
             #if args.distributed:
             #    test_loss = torch.tensor(ms.test_loss).to(device)
