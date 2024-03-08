@@ -10,6 +10,10 @@ def print_arr(arr):
     print(', '.join('{:0.5f}'.format(i) for i in arr))
 
 
+def tensorlist2str(arr):
+    return ', '.join('{:0.5f}'.format(i.item()) for i in arr)
+
+
 def generate_model_name(name, epoch=None):
     name = name.replace(".pt", "")
     name = name.replace(" ", "_")
@@ -25,6 +29,7 @@ def generate_model_name(name, epoch=None):
     name = name.replace("=", "_")
     name = name.replace("True", "1")
     name = name.replace("False", "0")
+    name = name.replace("__", "_")
     name = name.replace("__", "_")
     if len(name) > 40:
         name = name[0:40]
@@ -55,10 +60,10 @@ def profile_model(cfg, model, para=False):
 
 
 def get_representation_dim(cfg, model):
-    rep = model.extract_representation(torch.zeros(1, cfg.seq_length, cfg.input_length))
-    assert rep.dim() == 2 and rep.shape[0] == 1
-    print("Representation dimensionality is", rep.shape[1])
-    return rep.shape[1]
+  rep = model.extract_representation(torch.zeros(1, cfg.seq_length, cfg.input_length))
+  assert rep.dim() == 2 and rep.shape[0] == 1
+  print("Representation dimensionality is", rep.shape[1])
+  return rep.shape[1]
 
 
 def NormMSELoss(inp, target, delta=0.1):

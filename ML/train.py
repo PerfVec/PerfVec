@@ -24,16 +24,16 @@ class ModelSet:
         self.name = name
         self.model = model
         self.optimizer = optimizer
-        self.min_loss = float("inf")
-        self.cur_loss = 0
-        self.total_loss = 0
         self.scheduler = scheduler
+        self.train_loss = 0
+        self.test_loss = 0
+        self.min_loss = float("inf")
 
 
 def train_mul(args, models, device, train_loader, loss_fn, epoch, rank):
     for ms in models:
         ms.model.train()
-        ms.total_loss = 0
+        ms.train_loss = 0
     start_t = time.time()
     print_threshold = max(len(train_loader) // 100, 1)
     for batch_idx, (data, target) in enumerate(train_loader):
@@ -42,7 +42,7 @@ def train_mul(args, models, device, train_loader, loss_fn, epoch, rank):
             ms.optimizer.zero_grad()
             output = ms.model(data)
             loss = loss_fn(output, target)
-            ms.total_loss += loss.item()
+            ms.train_loss += loss.item()
             loss.backward()
             if args.clip > 0:
                 nn.utils.clip_grad_norm_(ms.model.parameters(), args.clip)
@@ -54,18 +54,14 @@ def train_mul(args, models, device, train_loader, loss_fn, epoch, rank):
     if rank == 0:
         print('', flush=True)
     end_t = time.time()
-    if args.distributed:
-        dist.barrier()
-    for ms in models:
-        ms.total_loss /= len(train_loader.dataset)
-        print('Train Epoch {} {}: {} \tLoss: {:.6f} \tTime: {:.1f}'.format(
-            epoch, ms.idx, rank, ms.total_loss, end_t - start_t), flush=True)
+    train_print(args, models, device, epoch, rank,
+                len(train_loader) * args.batch_size, end_t - start_t):
 
 
 def train_sbatch_mul(args, cfg, models, device, train_loader, loss_fn, epoch, rank):
     for ms in models:
         ms.model.train()
-        ms.total_loss = 0
+        ms.train_loss = 0
     start_t = time.time()
     print_threshold = max(len(train_loader) // 100, 1)
     for batch_idx, (data, target) in enumerate(train_loader):
@@ -77,7 +73,7 @@ def train_sbatch_mul(args, cfg, models, device, train_loader, loss_fn, epoch, ra
                 ms.optimizer.zero_grad()
                 output = ms.model(cur_data)
                 loss = loss_fn(output, cur_target)
-                ms.total_loss += loss.item()
+                ms.train_loss += loss.item()
                 loss.backward()
                 if args.clip > 0:
                     nn.utils.clip_grad_norm_(ms.model.parameters(), args.clip)
@@ -89,36 +85,47 @@ def train_sbatch_mul(args, cfg, models, device, train_loader, loss_fn, epoch, ra
     if rank == 0:
         print('', flush=True)
     end_t = time.time()
+    train_print(args, models, device, epoch, rank,
+                len(train_loader) * args.batch_size * args.sbatch_size, end_t - start_t):
+
+
+def train_print(args, models, device, epoch, rank, size, time):
+  for ms in models:
+    ms.train_loss /= size
     if args.distributed:
-        dist.barrier()
-    for ms in models:
-        ms.total_loss /= len(train_loader.dataset)
-        ms.total_loss /= args.sbatch_size
-        print('Train Epoch {} {}: {} \tLoss: {:.6f} \tTime: {:.1f}'.format(
-            epoch, ms.idx, rank, ms.total_loss, end_t - start_t), flush=True)
+      if rank == 0:
+        gather_list = [torch.zeros(1) for _ in range(args.world_size)]
+      train_loss = torch.tensor(ms.train_loss).to(device)
+      dist.gather(train_loss, gather_list, dst=0)
+      if rank == 0:
+        avg_loss = torch.mean(torch.stack(gather_list))
+        print('Train Epoch {} {}: \tLoss: {:.6f} ({}) \tTime: {:.1f} s'.format(
+            epoch, ms.idx, avg_loss.item(), tensorlist2str(gather_list), time), flush=True)
+    else:
+      print('Train Epoch {} {}: \tLoss: {:.6f} \tTime: {:.1f} s'.format(
+          epoch, ms.idx, ms.train_loss, time), flush=True)
 
 
 def test_mul(args, models, device, test_loader, loss_fn, rank):
     for ms in models:
         ms.model.eval()
-        ms.total_loss = 0
+        ms.test_loss = 0
+    start_t = time.time()
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             for ms in models:
                 output = ms.model(data)
-                ms.total_loss += loss_fn(output, target).item()
-    for ms in models:
-        ms.total_loss /= len(test_loader.dataset)
-        ms.cur_loss = ms.total_loss
-        print('Test set {} {}: Loss: {:.6f}'.format(
-            ms.idx, rank, ms.total_loss), flush=True)
+                ms.test_loss += loss_fn(output, target).item()
+    end_t = time.time()
+    test_postprocess(args, models, device, rank,
+        len(test_loader) * args.batch_size, end_t - start_t):
 
 
 def test_sbatch_mul(args, cfg, models, device, test_loader, loss_fn, rank):
     for ms in models:
         ms.model.eval()
-        ms.total_loss = 0
+        ms.test_loss = 0
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
@@ -127,13 +134,37 @@ def test_sbatch_mul(args, cfg, models, device, test_loader, loss_fn, rank):
                 cur_target = target[:,i,:]
                 for ms in models:
                     output = ms.model(cur_data)
-                    ms.total_loss += loss_fn(output, cur_target).item()
-    for ms in models:
-        ms.total_loss /= len(test_loader.dataset)
-        ms.total_loss /= args.sbatch_size
-        ms.cur_loss = ms.total_loss
-        print('Test set {} {}: Loss: {:.6f}'.format(
-            ms.idx, rank, ms.total_loss), flush=True)
+                    ms.test_loss += loss_fn(output, cur_target).item()
+    test_postprocess(args, models, device, rank,
+        len(test_loader) * args.batch_size * args.sbatch_size, end_t - start_t):
+
+
+def test_postprocess(args, models, device, rank, size, time):
+  for ms in models:
+    ms.test_loss /= size
+    if args.distributed:
+      if rank == 0:
+        gather_list = [torch.zeros(1) for _ in range(args.world_size)]
+      test_loss = torch.tensor(ms.test_loss).to(device)
+      dist.gather(test_loss, gather_list, dst=0)
+      if rank == 0:
+        avg_loss = torch.mean(torch.stack(gather_list))
+        ms.test_loss = avg_loss.item()
+        print('Test {}: \tLoss: {:.6f} ({}) \tTime: {:.1f} s'.format(
+            ms.idx, ms.test_loss, tensorlist2str(gather_list), time), flush=True)
+    else:
+      print('Test {}: \tLoss: {:.6f} \tTime: {:.1f} s'.format(
+          ms.idx, ms.test_loss, time), flush=True)
+
+    # Update minimal loss.
+    if rank == 0:
+      if ms.test_loss < ms.min_loss:
+        print("Find new minimal loss", ms.test_loss, "to replace", ms.min_loss, "of model", ms.idx)
+        ms.min_loss = ms.test_loss
+        if not args.no_save_model:
+          save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args, True)
+      if (not args.no_save_model) and epoch % args.save_interval == 0:
+        save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args)
 
 
 def save_checkpoint(name, model, optimizer, epoch, best_loss, args, best=False):
@@ -194,7 +225,6 @@ def main_rank(rank, args):
         global_rank = args.node_rank * args.gpus + rank
         dist.init_process_group("nccl", rank=global_rank, world_size=args.world_size)
 
-    #torch.set_float32_matmul_precision('high')
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     torch.manual_seed(args.seed)
 
@@ -256,6 +286,7 @@ def main_rank(rank, args):
                 if rank == 0:
                     print ('Enable PyTorch 2.0 compile.')
                 model = torch.compile(model)
+                torch.set_float32_matmul_precision('high')
         elif torch.cuda.device_count() > 1:
             print ('Available devices', torch.cuda.device_count())
             print ('Current cuda device', torch.cuda.current_device())
@@ -265,6 +296,7 @@ def main_rank(rank, args):
             if int(torch.__version__[0]) >= 2:
                 print ('Enable PyTorch 2.0 compile.')
                 model = torch.compile(model)
+                torch.set_float32_matmul_precision('high')
         opt_args = {}
         if args.lr != 0:
             lr_arg = {'lr': args.lr}
@@ -275,7 +307,8 @@ def main_rank(rank, args):
         optimizer = optim.Adam(model.parameters(), **opt_args)
         scheduler = None
         if args.lr_step > 0:
-            scheduler = StepLR(optimizer, step_size=args.lr_step, verbose=True)
+            scheduler = StepLR(optimizer, step_size=args.lr_step)
+            print ('Use a scheduler with a step of %s.' % args.lr_step)
         models.append(ModelSet(i, name, model, optimizer, scheduler))
         i += 1
         #ori_lr = optimizer.defaults['lr']
@@ -298,9 +331,6 @@ def main_rank(rank, args):
         if args.distributed:
             dist.barrier()
             train_sampler.set_epoch(epoch - 1)
-        #lr = adjust_learning_rate(optimizer, epoch - 1, ori_lr)
-        #if rank == 0:
-        #    print("Epoch", epoch, "with lr", lr, flush=True)
         if args.sbatch:
             train_sbatch_mul(args, cfg, models, device, train_loader, loss_fn, epoch, rank)
         else:
@@ -312,20 +342,23 @@ def main_rank(rank, args):
         else:
             test_mul(args, models, device, test_loader, loss_fn, rank)
         for ms in models:
-            if args.distributed:
-                cur_loss = torch.tensor(ms.cur_loss).to(device)
-                dist.all_reduce(cur_loss, op=dist.ReduceOp.SUM)
-                ms.cur_loss = cur_loss.item() / args.world_size
-            if rank == 0:
-                if ms.cur_loss < ms.min_loss:
-                    print("Find new minimal loss", ms.cur_loss, "to replace", ms.min_loss, "of model", ms.idx)
-                    ms.min_loss = ms.cur_loss
-                    if not args.no_save_model:
-                        save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args, True)
-                if (not args.no_save_model) and epoch % args.save_interval == 0:
-                    save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args)
-            if args.lr_step > 0:
+            #if args.distributed:
+            #    test_loss = torch.tensor(ms.test_loss).to(device)
+            #    dist.all_reduce(test_loss, op=dist.ReduceOp.SUM)
+            #    ms.test_loss = test_loss.item() / args.world_size
+            #if rank == 0:
+            #    if ms.test_loss < ms.min_loss:
+            #        print("Find new minimal loss", ms.test_loss, "to replace", ms.min_loss, "of model", ms.idx)
+            #        ms.min_loss = ms.test_loss
+            #        if not args.no_save_model:
+            #            save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args, True)
+            #    if (not args.no_save_model) and epoch % args.save_interval == 0:
+            #        save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args)
+            if ms.scheduler is not None:
                 ms.scheduler.step()
+            #lr = adjust_learning_rate(ms.optimizer, epoch - 1, ori_lr)
+            #if rank == 0:
+            #    print("Epoch", epoch, "with lr", lr, flush=True)
 
     if args.distributed:
         # Clean up.
@@ -384,6 +417,7 @@ def main():
         os.environ['MASTER_PORT'] = '12356'
         mp.spawn(main_rank, args=(args,), nprocs=args.gpus, join=True)
     else:
+        args.world_size = 1
         main_rank(0, args)
 
 
