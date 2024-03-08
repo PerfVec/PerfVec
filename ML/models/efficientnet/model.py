@@ -170,9 +170,7 @@ class E1DNet(nn.Module):
         bn_eps = self._global_params.batch_norm_epsilon
 
         # Get stem static or dynamic convolution depending on input size
-        input_size = global_params.input_size
-        self.seq_length = input_size
-        self.inst_length = global_params.inst_length
+        input_size = self._global_params.input_size
 
         # Stem
         in_channels = global_params.inst_length
@@ -253,7 +251,7 @@ class E1DNet(nn.Module):
                 >>> print(endpoints['reduction_5'].shape)  # torch.Size([1, 1280, 7, 7])
         """
         endpoints = dict()
-        inputs = inputs.view(-1, self.seq_length, self.inst_length).transpose(2,1)
+        inputs = inputs.view(-1, self._global_params.input_size, self._global_params.inst_length).transpose(2,1)
 
         # Stem
         x = self._swish(self._bn0(self._conv_stem(inputs)))
@@ -285,7 +283,7 @@ class E1DNet(nn.Module):
             Output of the final convolution
             layer in the efficientnet model.
         """
-        inputs = inputs.view(-1, self.seq_length, self.inst_length).transpose(2,1)
+        inputs = inputs.view(-1, self._global_params.input_size, self._global_params.inst_length).transpose(2,1)
         # Stem
         x = self._swish(self._bn0(self._conv_stem(inputs)))
         #x = self._conv_stem(inputs)

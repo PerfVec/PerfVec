@@ -1,2 +1,5 @@
-from .models import *
-from .efficientnet import EfficientNet, E1DNet
+from .basic import Predictor, RepExtractor
+from .lstm import SeqLSTM, InsLSTM, InsLSTMDSE, SeqEmLSTM, InsEmLSTM
+from .cnn import CNN, MLP
+from .efficientnet import E1DNet
+from .transformer import TransformerModel

@@ -682,13 +682,14 @@ def e1d(width_coefficient=None, depth_coefficient=None, input_size=None, inst_le
         blocks_args = bargs
     else:
         blocks_args = [
-            'r1_k1_s1_e1_i512_o256_se0.25', # 256
-            'r2_k2_s2_e6_i256_o128_se0.25', # 128
-            'r2_k2_s2_e6_i128_o256_se0.25', # 64
-            #'r2_k2_s2_e6_i256_o512_se0.25', # 14
-            #'r2_k2_s2_e6_i512_o1024_se0.25', # 7
-            #'r2_k2_s2_e6_i1024_o2048_se0.25', # 4
-            #'r2_k2_s2_e6_i2048_o4096_se0.25', # 2
+            'r1_k2_s2_e2_i512_o128_se0.25', # 256
+            'r1_k2_s2_e2_i128_o196_se0.25', # 128
+            'r1_k2_s2_e2_i196_o256_se0.25', # 64
+            'r1_k2_s2_e2_i256_o384_se0.25', # 32
+            'r1_k2_s2_e2_i384_o512_se0.25', # 16
+            'r1_k2_s2_e2_i512_o768_se0.25', # 8
+            'r1_k2_s2_e2_i768_o1024_se0.25', # 4
+            'r1_k2_s2_e2_i1024_o1536_se0.25', # 2
         ]
     blocks_args = BlockDecoder.decode(blocks_args)
 
