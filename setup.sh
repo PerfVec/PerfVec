@@ -3,4 +3,4 @@ mkdir checkpoints
 mkdir models
 mkdir res
 
-pip install ptflops
+pip install ptflops -U

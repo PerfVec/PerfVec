@@ -23,14 +23,14 @@ A concrete step-by-step example can be found in
 The modified gem5 can be obtained from
 [https://github.com/lingda-li/gem5/tree/ml_sim](https://github.com/lingda-li/gem5/tree/ml_sim).
 Simulating a program in SE mode using this gem5 will generate two instruction
-trace files, `trace.txt` and `trace.sq.txt`.
+trace files, `trace.txt` and `sq.trace.txt`.
 
 2. <a name="inputgen"></a> Generate the PerfVec model input from the gem5 instruction execution trace.
 
     `python -m DP.trace2nmmap <trace name>`
 
 3. Create a config file for the generated data.
-An example can be seen in `CFG/com_spectest_1223.py`.
+An example can be seen in [CFG/com_spectest_1223.py](CFG/com_spectest_1223.py).
 Make a copy of it, and then put the input path and size in `sim_datasets`.
 
 4. Run the trained PerfVec model.
@@ -51,7 +51,7 @@ A concrete step-by-step example can be found in
 [Tutorials/predict.md](Tutorials/predict.md).
 
 1. Create a config file for the generated data.
-An example can be seen in `CFG/rep_spectest_0124.py`.
+An example can be seen in [CFG/rep_spectest_0124.py](CFG/rep_spectest_0124.py).
 Put the program representation file in `dataset`.
 
 2. Make execution time prediction with a pre-trained model that includes
@@ -95,7 +95,7 @@ For each program that is intended to be used in training or testing, do the foll
 
 
 5. Create a config file for the generated data.
-An example can be seen in `CFG/com_0522.py`.
+An example can be seen in [CFG/com_0522.py](CFG/com_0522.py).
 The following information is needed in the config file.
     * List the name, input size, and output size of all programs in `datasets`.
     * Modify `data_set_idx` to be the number of programs.
@@ -105,7 +105,7 @@ The following information is needed in the config file.
     * Modify `cfg_num` to be the number of microarchitectures.
 
 6. Train a PerfVec foundation model.
-See `ML/models.py` for various model options, or implement your own.
+See [ML/models](ML/models) for various model options, or implement your own.
 
     ```
     python -m ML.train --cfg=<config name> --train-size=<# instructions for training> \\
