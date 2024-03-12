@@ -39,7 +39,7 @@ GlobalParams = collections.namedtuple('GlobalParams', [
     'width_coefficient', 'depth_coefficient', 'image_size', 'dropout_rate',
     'num_classes', 'batch_norm_momentum', 'batch_norm_epsilon',
     'drop_connect_rate', 'depth_divisor', 'min_depth', 'include_top',
-    'input_size', 'inst_length'])
+    'input_size', 'inst_length', 'bias'])
 
 # Parameters for an individual model block
 BlockArgs = collections.namedtuple('BlockArgs', [
@@ -709,6 +709,7 @@ def e1d(width_coefficient=None, depth_coefficient=None, input_size=None, inst_le
 
         input_size=input_size,
         inst_length=inst_length,
+        bias=True,
     )
 
     return blocks_args, global_params
