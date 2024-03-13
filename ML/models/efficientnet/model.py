@@ -214,6 +214,12 @@ class E1DNet(nn.Module):
         self._fc = nn.Linear(out_channels, self._global_params.num_classes, bias=self._global_params.bias)
         self._swish = MemoryEfficientSwish()
 
+        # Activation function for representation.
+        if self._global_params.rep_af == 'relu':
+            self.rep_af = F.relu
+        else:
+            self.rep_af = None
+
         # Set swish for TorchScript.
         self.set_swish(memory_efficient=False)
 
@@ -301,6 +307,18 @@ class E1DNet(nn.Module):
 
         return x
 
+    def extract_representation(self, x):
+        # Convolution layers
+        x = self.extract_features(x)
+        # Pooling and final linear layer
+        x = self._avg_pooling(x)
+        if self._global_params.include_top:
+            x = x.flatten(start_dim=1)
+            x = self._dropout(x)
+            if self.rep_af is not None:
+                x = self.rep_af(x)
+        return x
+
     def forward(self, x):
         """EfficientNet's forward function.
            Calls extract_features to extract features, applies final linear layer, and returns logits.
@@ -311,13 +329,8 @@ class E1DNet(nn.Module):
         Returns:
             Output of this model after processing.
         """
-        # Convolution layers
-        x = self.extract_features(x)
-        # Pooling and final linear layer
-        x = self._avg_pooling(x)
+        x = self.extract_representation(x)
         if self._global_params.include_top:
-            x = x.flatten(start_dim=1)
-            x = self._dropout(x)
             x = self._fc(x)
         return x
 
