@@ -29,6 +29,7 @@ def generate_model_name(name, epoch=None):
     name = name.replace("=", "_")
     name = name.replace("True", "1")
     name = name.replace("False", "0")
+    name = name.replace("from_input", "")
     name = name.replace("__", "_")
     name = name.replace("__", "_")
     if len(name) > 40:

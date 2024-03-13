@@ -178,9 +178,9 @@ def save_checkpoint(name, model, optimizer, epoch, best_loss, args, best=False):
     if args.loss != "MSE":
         extra_name += '_lo' + args.loss
     if best:
-        name = 'checkpoints/' + generate_model_name(name) + '_' + args.cfg + extra_name + '_best.pt'
+        name = generate_model_name(name) + '_' + args.cfg + extra_name + '_best.pt'
     else:
-        name = 'checkpoints/' + generate_model_name(name, epoch) + '_' + args.cfg + extra_name + '.pt'
+        name = generate_model_name(name, epoch) + '_' + args.cfg + extra_name + '.pt'
     saved_dict = {'epoch': epoch,
                   'best_loss': best_loss,
                   'optimizer_state_dict': optimizer.state_dict()}
@@ -189,8 +189,9 @@ def save_checkpoint(name, model, optimizer, epoch, best_loss, args, best=False):
     else:
         model_dict = {'model_state_dict': model.state_dict()}
     saved_dict.update(model_dict)
-    torch.save(saved_dict, name)
-    print("Saved checkpoint", name)
+    torch.save(saved_dict, 'checkpoints/' + name)
+    torch.save(model, 'models/' + name)
+    print("Saved checkpoint at", 'checkpoints/' + name, "and model at", 'models/' + name)
 
 
 def load_checkpoint(rank, name, model, optimizer, device):
@@ -347,18 +348,6 @@ def main_rank(rank, args):
         else:
             test_mul(args, models, device, test_loader, loss_fn, epoch, rank)
         for ms in models:
-            #if args.distributed:
-            #    test_loss = torch.tensor(ms.test_loss).to(device)
-            #    dist.all_reduce(test_loss, op=dist.ReduceOp.SUM)
-            #    ms.test_loss = test_loss.item() / args.world_size
-            #if rank == 0:
-            #    if ms.test_loss < ms.min_loss:
-            #        print("Find new minimal loss", ms.test_loss, "to replace", ms.min_loss, "of model", ms.idx)
-            #        ms.min_loss = ms.test_loss
-            #        if not args.no_save_model:
-            #            save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args, True)
-            #    if (not args.no_save_model) and epoch % args.save_interval == 0:
-            #        save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args)
             if ms.scheduler is not None:
                 ms.scheduler.step()
             #lr = adjust_learning_rate(ms.optimizer, epoch - 1, ori_lr)
