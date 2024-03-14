@@ -120,7 +120,7 @@ See [ML/models](ML/models) for various model options, or implement your own.
 
 ## Requirement
 
-Python 3, PyTorch, numpy, ptflops
+Python 3, PyTorch (>= 1.10 recommended), numpy, ptflops
 
 ## Code Structure
 
