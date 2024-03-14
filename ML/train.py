@@ -190,8 +190,9 @@ def save_checkpoint(name, model, optimizer, epoch, best_loss, args, best=False):
         model_dict = {'model_state_dict': model.state_dict()}
     saved_dict.update(model_dict)
     torch.save(saved_dict, 'checkpoints/' + name)
-    torch.save(model, 'models/' + name)
-    print("Saved checkpoint at", 'checkpoints/' + name, "and model at", 'models/' + name)
+    print("Saved checkpoint at", 'checkpoints/' + name)
+    #torch.save(model, 'models/' + name)
+    #print("Saved checkpoint at", 'checkpoints/' + name, "and model at", 'models/' + name)
 
 
 def load_checkpoint(rank, name, model, optimizer, device):
