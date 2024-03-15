@@ -12,6 +12,10 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim.lr_scheduler import StepLR
+try:
+  import torch._dynamo
+except:
+  pass
 
 from ML.custom_data import *
 from ML.utils import *
@@ -178,10 +182,11 @@ def save_checkpoint(name, model, optimizer, epoch, best_loss, args, best=False):
     if args.loss != "MSE":
         extra_name += '_lo' + args.loss
     if best:
-        name = generate_model_name(name) + '_' + args.cfg + extra_name + '_best.pt'
+        file_name = generate_model_name(name) + '_' + args.cfg + extra_name + '_best.pt'
     else:
-        name = generate_model_name(name, epoch) + '_' + args.cfg + extra_name + '.pt'
-    saved_dict = {'epoch': epoch,
+        file_name = generate_model_name(name, epoch) + '_' + args.cfg + extra_name + '.pt'
+    saved_dict = {'name': name,
+                  'epoch': epoch,
                   'best_loss': best_loss,
                   'optimizer_state_dict': optimizer.state_dict()}
     if torch.cuda.device_count() > 1:
@@ -189,10 +194,10 @@ def save_checkpoint(name, model, optimizer, epoch, best_loss, args, best=False):
     else:
         model_dict = {'model_state_dict': model.state_dict()}
     saved_dict.update(model_dict)
-    torch.save(saved_dict, 'checkpoints/' + name)
-    print("Saved checkpoint at", 'checkpoints/' + name)
-    #torch.save(model, 'models/' + name)
-    #print("Saved checkpoint at", 'checkpoints/' + name, "and model at", 'models/' + name)
+    torch.save(saved_dict, 'checkpoints/' + file_name)
+    print("Saved checkpoint at", 'checkpoints/' + file_name)
+    #torch.save(model, 'models/' + file_name)
+    #print("Saved checkpoint at", 'checkpoints/' + file_name, "and model at", 'models/' + file_name)
 
 
 def load_checkpoint(rank, name, model, optimizer, device):
@@ -293,7 +298,9 @@ def main_rank(rank, args):
                     print ('Enable PyTorch 2.0 compile.')
                 model = torch.compile(model)
                 torch.set_float32_matmul_precision('high')
+                torch._dynamo.config.suppress_errors = True
         elif torch.cuda.device_count() > 1:
+            print ('Warning: data parallel will be deprecated.')
             print ('Available devices', torch.cuda.device_count())
             print ('Current cuda device', torch.cuda.current_device())
             model = nn.DataParallel(model).to(device)
@@ -303,6 +310,7 @@ def main_rank(rank, args):
                 print ('Enable PyTorch 2.0 compile.')
                 model = torch.compile(model)
                 torch.set_float32_matmul_precision('high')
+                torch._dynamo.config.suppress_errors = True
         opt_args = {}
         if args.lr != 0:
             lr_arg = {'lr': args.lr}
