@@ -7,6 +7,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import torch.distributed as dist
+import torch.multiprocessing as mp
+from torch.nn.parallel import DistributedDataParallel as DDP
 try:
   import torch._dynamo
 except:
@@ -207,7 +210,7 @@ def infer(args, cfg, model, device, test_loader, rank, out_dim, with_target=True
 
 
 def simulate(args, cfg, model, device, test_loader, name, cfg_num, rank):
-  res = infer(args, cfg, model, device, test_loader, rank, cfg_num * cfg.tgt_length, with_target=True):
+  res = infer(args, cfg, model, device, test_loader, rank, cfg_num * cfg.tgt_length, with_target=True)
   if rank == 0:
     target_sum = res['target_sum'].view(cfg_num, cfg.tgt_length)
     output_sum = res['output_sum'].view(cfg_num, cfg.tgt_length)
@@ -252,7 +255,7 @@ def simulate(args, cfg, model, device, test_loader, name, cfg_num, rank):
 
 
 def get_program_representation(args, cfg, model, device, test_loader, rep_dim, name, rank):
-  res = infer(args, cfg, model, device, test_loader, rank, rep_dim, with_target=False):
+  res = infer(args, cfg, model, device, test_loader, rank, rep_dim, with_target=False)
   if rank == 0:
     rep_sum = res['output_sum']
     print("Representation:", rep_sum)
@@ -271,14 +274,18 @@ def get_program_representation(args, cfg, model, device, test_loader, rep_dim, n
     return 0
 
 
-def load_checkpoint(name, model, training=False, optimizer=None):
-    assert 'checkpoints/' in name
-    cp = torch.load(name, map_location=torch.device('cpu'))
-    model.load_state_dict(cp['model_state_dict'])
-    if training:
-        assert optimizer is not None
-        optimizer.load_state_dict(cp['optimizer_state_dict'])
-    print("Loaded checkpoint", name)
+def load_checkpoint(cp_name, model_name=None, training=False, optimizer=None):
+  assert 'checkpoints/' in cp_name
+  cp = torch.load(cp_name, map_location=torch.device('cpu'))
+  if model_name is None:
+    model = eval(cp['name'])
+  else:
+    model = eval(model_name)
+  model.load_state_dict(cp['model_state_dict'])
+  if training:
+    assert optimizer is not None
+    optimizer.load_state_dict(cp['optimizer_state_dict'])
+  return model
 
 
 def save_ts_model(cfg, name, model, device):
@@ -303,8 +310,14 @@ def test_main(rank, args):
   use_cuda = not args.no_cuda and torch.cuda.is_available()
   torch.manual_seed(args.seed)
 
-  assert len(args.models) == 1
-  model = eval(args.models[0])
+  if len(args.models) == 0:
+    model = load_checkpoint(args.checkpoints)
+  else:
+    assert len(args.models) == 1
+    model = load_checkpoint(args.checkpoints, args.models[0])
+  if rank == 0:
+    print("Loaded checkpoint", args.checkpoints)
+
   if args.rep:
     rep_dim = get_representation_dim(cfg, model)
   elif hasattr(cfg, 'sel_cfg_num'):
@@ -315,7 +328,6 @@ def test_main(rank, args):
     model.init_paras()
   if args.uarch_net:
     cfg_num -= 1
-  load_checkpoint(args.checkpoints, model)
   if args.uarch_net_unseen or args.pred:
     model.setup_test()
   #profile_model(cfg, model)
@@ -363,7 +375,7 @@ def test_main(rank, args):
       test_sampler = torch.utils.data.distributed.DistributedSampler(dataset, **shuffle_kwargs)
       test_loader = torch.utils.data.DataLoader(dataset, sampler=test_sampler, **kwargs)
       if rank == 0:
-        print("Warning: standard test does not work with DDP.")
+        print("Warning: standard test does not work correctly with DDP.")
     else:
       test_loader = torch.utils.data.DataLoader(dataset, **kwargs)
     if args.select:
@@ -403,7 +415,7 @@ def test_main(rank, args):
       if args.rep:
         all_rep[i] = get_program_representation(args, cfg, model, device, test_loader, rep_dim, name, rank)
       else:
-        res[i] = simulate(args, cfg, model, device, test_loader, name, cfg_num)
+        res[i] = simulate(args, cfg, model, device, test_loader, name, cfg_num, rank)
       if rank == 0:
         print('', flush=True)
     if args.rep and rank == 0:
