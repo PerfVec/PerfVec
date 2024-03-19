@@ -17,7 +17,7 @@ except:
 
 from .models import *
 from .custom_data import *
-from .utils import profile_model, get_representation_dim
+from .utils import profile_model, get_representation_dim, tensorlist2str
 
 
 loss_fn = nn.MSELoss()
@@ -200,6 +200,7 @@ def infer(args, cfg, model, device, test_loader, rank, out_dim, with_target=True
     total_loss /= len(test_loader.dataset)
     if args.sbatch:
       total_loss /= args.sbatch_size
+    # FIXME: total_loss needs to be gathered.
     extra_res = {'target_sum': target_sum.cpu(),
                  'loss': total_loss}
     res.update(extra_res)
@@ -274,13 +275,15 @@ def get_program_representation(args, cfg, model, device, test_loader, rep_dim, n
     return 0
 
 
-def load_checkpoint(cp_name, model_name=None, training=False, optimizer=None):
+def load_checkpoint(cp_name, init, model_name=None, training=False, optimizer=None):
   assert 'checkpoints/' in cp_name
   cp = torch.load(cp_name, map_location=torch.device('cpu'))
   if model_name is None:
     model = eval(cp['name'])
   else:
     model = eval(model_name)
+  if init:
+    model.init_paras()
   model.load_state_dict(cp['model_state_dict'])
   if training:
     assert optimizer is not None
@@ -310,11 +313,12 @@ def test_main(rank, args):
   use_cuda = not args.no_cuda and torch.cuda.is_available()
   torch.manual_seed(args.seed)
 
+  model_init = args.uarch_net or args.uarch_net_unseen
   if len(args.models) == 0:
-    model = load_checkpoint(args.checkpoints)
+    model = load_checkpoint(args.checkpoints, model_init)
   else:
     assert len(args.models) == 1
-    model = load_checkpoint(args.checkpoints, args.models[0])
+    model = load_checkpoint(args.checkpoints, model_init, args.models[0])
   if rank == 0:
     print("Loaded checkpoint", args.checkpoints)
 
@@ -324,8 +328,6 @@ def test_main(rank, args):
     cfg_num = cfg.sel_cfg_num
   else:
     cfg_num = cfg.cfg_num
-  if args.uarch_net or args.uarch_net_unseen:
-    model.init_paras()
   if args.uarch_net:
     cfg_num -= 1
   if args.uarch_net_unseen or args.pred:
@@ -341,7 +343,7 @@ def test_main(rank, args):
       if rank == 0:
         print ('Enable PyTorch 2.0 compile.')
       model = torch.compile(model)
-      #torch.set_float32_matmul_precision('high')
+      torch.set_float32_matmul_precision('high')
       torch._dynamo.config.suppress_errors = True
   elif torch.cuda.device_count() > 1:
     print ('Warning: data parallel will be deprecated.')
@@ -351,13 +353,17 @@ def test_main(rank, args):
   elif int(torch.__version__[0]) >= 2:
     print ('Enable PyTorch 2.0 compile.')
     model = torch.compile(model)
-    #torch.set_float32_matmul_precision('high')
+    torch.set_float32_matmul_precision('high')
+    torch._dynamo.config.suppress_errors = True
     model.to(device)
 
-  kwargs = {'batch_size': args.batch_size,
-            'shuffle': False}
+  kwargs = {'batch_size': args.batch_size}
   if use_cuda:
-    cuda_kwargs = {'num_workers': 1,
+    if args.distributed:
+      num_workers = 0
+    else:
+      num_workers = 2
+    cuda_kwargs = {'num_workers': num_workers,
                    'pin_memory': True}
     kwargs.update(cuda_kwargs)
 
@@ -377,7 +383,7 @@ def test_main(rank, args):
       if rank == 0:
         print("Warning: standard test does not work correctly with DDP.")
     else:
-      test_loader = torch.utils.data.DataLoader(dataset, **kwargs)
+      test_loader = torch.utils.data.DataLoader(dataset, shuffle=False, **kwargs)
     if args.select:
       print("Test with different micro-architecture arrangement.")
       assert hasattr(cfg, 'sel_output')
