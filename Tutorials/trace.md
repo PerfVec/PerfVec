@@ -14,82 +14,82 @@ Use the 4th instruction in [trace_example.txt]() as an example,
 
 These numbers are:
 
-<span style="color:blue">0</span>: whether this instruction incurs a fault during execution.
+<span style="color:blue">*0*</span>: whether this instruction incurs a fault during execution.
 
-<span style="color:blue">-1</span>: store queue index for store instructions, -1 for other instructions.
+<span style="color:blue">*-1*</span>: store queue index for store instructions, -1 for other instructions.
 
-<span style="color:blue">80500</span>: when this instruction is fetched. All latencies here and below are in the unit of ps.
+<span style="color:blue">*80500*</span>: when this instruction is fetched. All latencies here and below are in the unit of ps.
 
-<span style="color:blue">120500</span>: how long it takes to get out of reorder buffer.
+<span style="color:blue">*120500*</span>: how long it takes to get out of reorder buffer.
 
-<span style="color:blue">121000</span>: how long it takes to retire (retire latency).
+<span style="color:blue">*121000*</span>: how long it takes to retire (retire latency).
 
-<span style="color:blue">1500</span>: decode latency.
+<span style="color:blue">*1500*</span>: decode latency.
 
-<span style="color:blue">2500</span>: rename latency.
+<span style="color:blue">*2500*</span>: rename latency.
 
-<span style="color:blue">3000</span>: dispatch latency.
+<span style="color:blue">*3000*</span>: dispatch latency.
 
-<span style="color:blue">3000</span>: issue latency.
+<span style="color:blue">*3000*</span>: issue latency.
 
-<span style="color:blue">47</span>: op class defined by gem5.
+<span style="color:blue">*47*</span>: op class defined by gem5.
 
-<span style="color:blue">0</span>: whether it is a micro operation.
+<span style="color:blue">*0*</span>: whether it is a micro operation.
 
-<span style="color:blue">0</span>: whether it is a conditional branch.
+<span style="color:blue">*0*</span>: whether it is a conditional branch.
 
-<span style="color:blue">0</span>: whether it is an unconditional branch.
+<span style="color:blue">*0*</span>: whether it is an unconditional branch.
 
-<span style="color:blue">0</span>: whether it is a direct branch.
+<span style="color:blue">*0*</span>: whether it is a direct branch.
 
-<span style="color:blue">0</span>: whether it needs to squash instructions after it.
+<span style="color:blue">*0*</span>: whether it needs to squash instructions after it.
 
-<span style="color:blue">0</span>: whether instructions need to execute sequentially after it.
+<span style="color:blue">*0*</span>: whether instructions need to execute sequentially after it.
 
-<span style="color:blue">0</span>: whether instructions need to execute sequentially before it.
+<span style="color:blue">*0*</span>: whether instructions need to execute sequentially before it.
 
-<span style="color:blue">0</span>: whether it is an atomic instruction.
+<span style="color:blue">*0*</span>: whether it is an atomic instruction.
 
-<span style="color:blue">0</span>: whether it is a conditional store instruction.
+<span style="color:blue">*0*</span>: whether it is a conditional store instruction.
 
-<span style="color:blue">0</span>: whether it acts a barrier for memory read.
+<span style="color:blue">*0*</span>: whether it acts a barrier for memory read.
 
-<span style="color:blue">0</span>: whether it acts a barrier for memory write.
+<span style="color:blue">*0*</span>: whether it acts a barrier for memory write.
 
-<span style="color:blue">0</span>: whether it is a quiesce instruction.
+<span style="color:blue">*0*</span>: whether it is a quiesce instruction.
 
-<span style="color:blue">0</span>: whether it is a non speculative instruction.
+<span style="color:blue">*0*</span>: whether it is a non speculative instruction.
 
-<span style="color:blue">1</span>: whether it accesses memory.
+<span style="color:blue">*1*</span>: whether it accesses memory.
 
-<span style="color:blue">549755747984</span>: memory address it accesses.
+<span style="color:blue">*549755747984*</span>: memory address it accesses.
 
-<span style="color:blue">8</span>: memory size it accesses.
+<span style="color:blue">*8*</span>: memory size it accesses.
 
-<span style="color:blue">2</span>: how many cache/memory levels it goes through to satisfy the request.
+<span style="color:blue">*2*</span>: how many cache/memory levels it goes through to satisfy the request.
 
-<span style="color:blue">-1 -1 -1</span>: Data MMU walking depths in case of DTLB miss.
+<span style="color:blue">*-1 -1 -1*</span>: Data MMU walking depths in case of DTLB miss.
 
-<span style="color:blue">0 0 0</span>: Data MMU walking addresses in case of DTLB miss.
+<span style="color:blue">*0 0 0*</span>: Data MMU walking addresses in case of DTLB miss.
 
-<span style="color:blue">0 0 0</span>: the number of cache writebacks due to data access in case of cache replacement.
+<span style="color:blue">*0 0 0*</span>: the number of cache writebacks due to data access in case of cache replacement.
 
-<span style="color:blue">4196460</span>: program counter.
+<span style="color:blue">*4196460*</span>: program counter.
 
-<span style="color:blue">0</span>: whether it branches.
+<span style="color:blue">*0*</span>: whether it branches.
 
-<span style="color:blue">0</span>: whether a branch is mis-predicted.
+<span style="color:blue">*0*</span>: whether a branch is mis-predicted.
 
-<span style="color:blue">-1</span>: how many cache/memory levels it goes through to fetch the instruction.
+<span style="color:blue">*-1*</span>: how many cache/memory levels it goes through to fetch the instruction.
 
-<span style="color:blue">-1 -1 -1</span>: Instruction MMU walking depths in case of ITLB miss.
+<span style="color:blue">*-1 -1 -1*</span>: Instruction MMU walking depths in case of ITLB miss.
 
-<span style="color:blue">0 0 0</span>: Instruction MMU walking addresses in case of ITLB miss.
+<span style="color:blue">*0 0 0*</span>: Instruction MMU walking addresses in case of ITLB miss.
 
-<span style="color:blue">0 0</span>: the number of cache writebacks due to instruction fetch in case of cache replacement.
+<span style="color:blue">*0 0*</span>: the number of cache writebacks due to instruction fetch in case of cache replacement.
 
-<span style="color:blue">1 1</span>: the number of source and destination registers, which decides how many registers are listed behind them.
+<span style="color:blue">*1 1*</span>: the number of source and destination registers, which decides how many registers are listed behind them.
 
-<span style="color:blue">0 42</span>: the category and index of the first and only source register.
+<span style="color:blue">*0 42*</span>: the category and index of the first and only source register.
 
-<span style="color:blue">0 1</span>: the category and index of the first and only destination register.
+<span style="color:blue">*0 1*</span>: the category and index of the first and only destination register.
