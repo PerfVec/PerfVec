@@ -77,3 +77,7 @@ def NormL1Loss(inp, target, delta=0.1):
   norm_inp = inp / (target + delta)
   norm_target = target / (target + delta)
   return nn.L1Loss(norm_inp, norm_target)
+
+
+def RMSELoss(inp, target, delta=0.1):
+  return torch.sqrt(nn.MSELoss(inp, target))

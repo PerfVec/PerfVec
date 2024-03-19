@@ -339,6 +339,9 @@ def main_rank(rank, args):
     elif args.loss == "NL1":
         print("Use normalized L1Loss.")
         loss_fn = NormL1Loss()
+    elif args.loss == "RMSE":
+        print("Use root MSELoss.")
+        loss_fn = RMSELoss()
     else:
         raise AttributeError("%s is an invalid loss function." % args.loss)
 
