@@ -94,44 +94,47 @@ mm_batch_size = 512
 
 class MemMappedBatchDataset(Dataset):
 
-    def __init__(self, cfg, paras, start, end):
-        file_name = paras[0]
-        in_size = paras[1]
-        if len(paras) == 4:
-            out_size = paras[3]
-            out_use_size = paras[2]
-            assert out_use_size <= out_size
-        else:
-            assert len(paras) == 3
-            out_size = paras[2]
-            out_use_size = out_size
-        assert in_size >= out_size
-        self.in_arr = np.memmap(file_name, dtype=cfg.feature_format, mode='r',
-                                shape=(in_size, cfg.input_length))
-        self.out_arr = np.memmap(cfg.get_out_name(file_name), dtype=cfg.target_format, mode='r',
-                                 shape=(out_size, cfg.ori_tgt_length * cfg.cfg_num))
-        self.batchsize = mm_batch_size
-        if end < start:
-            raise AttributeError("End is illegal.")
-        elif end * self.batchsize > out_use_size:
-            print("Use the maximum size of", out_use_size // self.batchsize,
-                  "instead of", end)
-            end = out_use_size // self.batchsize
-        self.seq_length = cfg.seq_length
-        self.input_length = cfg.input_length
-        if hasattr(cfg, 'sel_batch_out'):
-            self.sel_out = cfg.sel_batch_out
-        else:
-            self.sel_out = None
-        if hasattr(cfg, 'sel_in'):
-            self.sel_in = cfg.sel_in
-        else:
-            self.sel_in = None
-        self.start = start
-        self.size = end - start
+    def __init__(self, cfg, paras, start, end, rank):
+      file_name = paras[0]
+      in_size = paras[1]
+      if len(paras) == 4:
+        out_size = paras[3]
+        out_use_size = paras[2]
+        assert out_use_size <= out_size
+      else:
+        assert len(paras) == 3
+        out_size = paras[2]
+        out_use_size = out_size
+      assert in_size >= out_size
+      self.in_arr = np.memmap(file_name, dtype=cfg.feature_format, mode='r',
+                              shape=(in_size, cfg.input_length))
+      self.out_arr = np.memmap(cfg.get_out_name(file_name), dtype=cfg.target_format, mode='r',
+                               shape=(out_size, cfg.ori_tgt_length * cfg.cfg_num))
+      self.batchsize = mm_batch_size
+      if end < start:
+        raise AttributeError("End is illegal.")
+      elif end * self.batchsize > out_use_size:
+        if rank == 0:
+          print("Use the maximum size of", out_use_size // self.batchsize,
+                "instead of", end, flush=True)
+        end = out_use_size // self.batchsize
+      self.seq_length = cfg.seq_length
+      self.input_length = cfg.input_length
+      if hasattr(cfg, 'sel_batch_out'):
+        self.sel_out = cfg.sel_batch_out
+      else:
+        self.sel_out = None
+      if hasattr(cfg, 'sel_in'):
+        self.sel_in = cfg.sel_in
+      else:
+        self.sel_in = None
+      self.start = start
+      self.size = end - start
+      if rank == 0:
         print("Open %s (%d %d %d) (sel_in %s) (sel_out %s)" % (cfg.get_out_name(file_name), start, end, self.size,
                                                                "yes" if self.sel_in is not None else "no",
-                                                               "yes" if self.sel_out is not None else "no"), flush=True)
+                                                               "yes" if self.sel_out is not None else "no"),
+                                                               flush=True)
 
     def __len__(self):
         return self.size
@@ -159,7 +162,7 @@ class MemMappedBatchDataset(Dataset):
 
 class CombinedMMBDataset(Dataset):
 
-    def __init__(self, cfg, file_num, start, end):
+    def __init__(self, cfg, file_num, start, end, rank):
         if file_num > len(cfg.datasets):
             raise AttributeError("Require more files than that exist.")
         total_size = 0
@@ -186,14 +189,14 @@ class CombinedMMBDataset(Dataset):
             self.starts.append(int(cfg.datasets[i][2] * (start / total_size) / mm_batch_size))
             self.mm_sizes.append(int(cfg.datasets[i][2] * frac / mm_batch_size))
             self.mm_sets.append(MemMappedBatchDataset(cfg, cfg.datasets[i],
-                                self.starts[i], self.starts[i] + self.mm_sizes[i]))
+                                self.starts[i], self.starts[i] + self.mm_sizes[i], rank))
             cum_start += self.starts[i]
             cum_size += self.mm_sizes[i]
             self.bounds.append(cum_size)
         self.starts.append(start - cum_start)
         self.mm_sizes.append(self.size - cum_size)
         self.mm_sets.append(MemMappedBatchDataset(cfg, cfg.datasets[file_num-1],
-                            self.starts[file_num-1], self.starts[file_num-1] + self.mm_sizes[file_num-1]))
+                            self.starts[file_num-1], self.starts[file_num-1] + self.mm_sizes[file_num-1], rank))
         self.bounds.append(self.size)
 
     def __len__(self):

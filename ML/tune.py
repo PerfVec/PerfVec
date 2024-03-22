@@ -181,8 +181,8 @@ def main_rank(rank, args):
     torch.manual_seed(args.seed)
 
     if args.sbatch:
-        dataset1 = CombinedMMBDataset(cfg, cfg.data_set_idx, 0, args.train_size)
-        dataset2 = CombinedMMBDataset(cfg, cfg.data_set_idx, cfg.valid_start, cfg.valid_end)
+        dataset1 = CombinedMMBDataset(cfg, cfg.data_set_idx, 0, args.train_size, rank)
+        dataset2 = CombinedMMBDataset(cfg, cfg.data_set_idx, cfg.valid_start, cfg.valid_end, rank)
     else:
         dataset1 = CombinedMMDataset(cfg, cfg.data_set_idx, 0, args.train_size)
         dataset2 = CombinedMMDataset(cfg, cfg.data_set_idx, cfg.valid_start, cfg.valid_end)

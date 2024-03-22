@@ -8,23 +8,25 @@ mm_batch_size = 512
 
 class MemMappedBatchDataset(Dataset):
 
-    def __init__(self, cfg, paras, start, end):
-        assert len(paras) == 2
-        file_name = paras[0]
-        in_size = paras[1]
-        self.in_arr = np.memmap(file_name, dtype=cfg.feature_format, mode='r',
-                                shape=(in_size, cfg.input_length))
-        self.batchsize = mm_batch_size
-        if end < start:
-            raise AttributeError("End is illegal.")
-        elif end * self.batchsize > in_size:
-            print("Use the maximum size of", in_size // self.batchsize,
-                  "instead of", end)
-            end = in_size // self.batchsize
-        self.seq_length = cfg.seq_length
-        self.input_length = cfg.input_length
-        self.start = start
-        self.size = end - start
+    def __init__(self, cfg, paras, start, end, rank):
+      assert len(paras) == 2
+      file_name = paras[0]
+      in_size = paras[1]
+      self.in_arr = np.memmap(file_name, dtype=cfg.feature_format, mode='r',
+                              shape=(in_size, cfg.input_length))
+      self.batchsize = mm_batch_size
+      if end < start:
+        raise AttributeError("End is illegal.")
+      elif end * self.batchsize > in_size:
+        if rank == 0:
+          print("Use the maximum size of", in_size // self.batchsize,
+                "instead of", end)
+        end = in_size // self.batchsize
+      self.seq_length = cfg.seq_length
+      self.input_length = cfg.input_length
+      self.start = start
+      self.size = end - start
+      if rank == 0:
         print("Open %s (%d %d %d)" % (file_name, start, end, self.size), flush=True)
 
     def __len__(self):
@@ -48,7 +50,7 @@ class MemMappedBatchDataset(Dataset):
 
 class CombinedMMBDataset(Dataset):
 
-    def __init__(self, cfg, file_num, start, end):
+    def __init__(self, cfg, file_num, start, end, rank):
         if file_num > len(cfg.datasets):
             raise AttributeError("Require more files than that exist.")
         total_size = 0
@@ -75,14 +77,14 @@ class CombinedMMBDataset(Dataset):
             self.starts.append(int(cfg.datasets[i][1] * (start / total_size) / mm_batch_size))
             self.mm_sizes.append(int(cfg.datasets[i][1] * frac / mm_batch_size))
             self.mm_sets.append(MemMappedBatchDataset(cfg, cfg.datasets[i],
-                                self.starts[i], self.starts[i] + self.mm_sizes[i]))
+                                self.starts[i], self.starts[i] + self.mm_sizes[i], rank))
             cum_start += self.starts[i]
             cum_size += self.mm_sizes[i]
             self.bounds.append(cum_size)
         self.starts.append(start - cum_start)
         self.mm_sizes.append(self.size - cum_size)
         self.mm_sets.append(MemMappedBatchDataset(cfg, cfg.datasets[file_num-1],
-                            self.starts[file_num-1], self.starts[file_num-1] + self.mm_sizes[file_num-1]))
+                            self.starts[file_num-1], self.starts[file_num-1] + self.mm_sizes[file_num-1], rank))
         self.bounds.append(self.size)
 
     def __len__(self):

@@ -373,7 +373,7 @@ def test_main(rank, args):
       assert not args.sbatch
       dataset = RepDataset(cfg.dataset, cfg.test_start, cfg.test_end)
     elif args.sbatch:
-      dataset = CombinedMMBDataset(cfg, cfg.data_set_idx, cfg.test_start, cfg.test_end)
+      dataset = CombinedMMBDataset(cfg, cfg.data_set_idx, cfg.test_start, cfg.test_end, rank)
     else:
       dataset = CombinedMMDataset(cfg, cfg.data_set_idx, cfg.test_start, cfg.test_end)
     if args.distributed:
@@ -397,7 +397,7 @@ def test_main(rank, args):
 
   if args.sim or args.rep:
     if rank == 0:
-      print("Run", args.sim_length, "instructions.")
+      print("Run", args.sim_length, "instructions.", flush=True)
     if args.rep:
       all_rep = torch.zeros(len(cfg.sim_datasets), rep_dim)
       torch.set_printoptions(threshold=1000)
@@ -407,7 +407,7 @@ def test_main(rank, args):
       if rank == 0:
         print(name, flush=True)
       if args.sbatch:
-        cur_dataset = MemMappedBatchDataset(cfg, cfg.sim_datasets[i], 0, args.sim_length // args.sbatch_size + 1)
+        cur_dataset = MemMappedBatchDataset(cfg, cfg.sim_datasets[i], 0, args.sim_length // args.sbatch_size + 1, rank)
       else:
         cur_dataset = MemMappedDataset(cfg, cfg.sim_datasets[i][0], cfg.sim_datasets[i][1], 0, args.sim_length)
       if args.distributed:
@@ -426,11 +426,11 @@ def test_main(rank, args):
         print('', flush=True)
     if args.rep and rank == 0:
       name = args.checkpoints.replace("checkpoints/", "res/prep_%s_" % args.cfg)
-      print("Save program representations to", name)
+      print("Save program representations to", name, flush=True)
       torch.save(all_rep, name)
     if args.save_sim and rank == 0:
       name = args.checkpoints.replace("checkpoints/", "res/simres_%s_" % args.cfg)
-      print("Save simulation results to", name)
+      print("Save simulation results to", name, flush=True)
       torch.save(res, name)
 
 
