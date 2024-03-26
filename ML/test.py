@@ -97,7 +97,7 @@ def test(args, cfg, model, device, test_loader, cfg_num, rank):
         total_output = torch.cat((total_output, output), 0)
         total_target = torch.cat((total_target, target), 0)
   end_t = time.time()
-  total_loss /= len(test_loader) * args.batch_size
+  total_loss /= len(test_loader)
   if args.sbatch:
     total_loss /= args.sbatch_size
   if args.distributed:

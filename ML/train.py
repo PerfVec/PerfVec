@@ -58,8 +58,7 @@ def train_mul(args, models, device, train_loader, loss_fn, epoch, rank):
     if rank == 0:
         print('', flush=True)
     end_t = time.time()
-    train_print(args, models, device, epoch, rank,
-        len(train_loader) * args.batch_size, end_t - start_t)
+    train_print(args, models, device, epoch, rank, len(train_loader), end_t - start_t)
 
 
 def train_sbatch_mul(args, cfg, models, device, train_loader, loss_fn, epoch, rank):
@@ -90,7 +89,7 @@ def train_sbatch_mul(args, cfg, models, device, train_loader, loss_fn, epoch, ra
         print('', flush=True)
     end_t = time.time()
     train_print(args, models, device, epoch, rank,
-        len(train_loader) * args.batch_size * args.sbatch_size, end_t - start_t)
+        len(train_loader) * args.sbatch_size, end_t - start_t)
 
 
 def train_print(args, models, device, epoch, rank, size, time):
@@ -123,8 +122,7 @@ def test_mul(args, models, device, test_loader, loss_fn, epoch, rank):
                 output = ms.model(data)
                 ms.test_loss += loss_fn(output, target).item()
     end_t = time.time()
-    test_postprocess(args, models, device, epoch, rank,
-        len(test_loader) * args.batch_size, end_t - start_t)
+    test_postprocess(args, models, device, epoch, rank, len(test_loader), end_t - start_t)
 
 
 def test_sbatch_mul(args, cfg, models, device, test_loader, loss_fn, epoch, rank):
@@ -143,7 +141,7 @@ def test_sbatch_mul(args, cfg, models, device, test_loader, loss_fn, epoch, rank
                     ms.test_loss += loss_fn(output, cur_target).item()
     end_t = time.time()
     test_postprocess(args, models, device, epoch, rank,
-        len(test_loader) * args.batch_size * args.sbatch_size, end_t - start_t)
+        len(test_loader) * args.sbatch_size, end_t - start_t)
 
 
 def test_postprocess(args, models, device, epoch, rank, size, time):
