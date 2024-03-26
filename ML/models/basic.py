@@ -36,3 +36,16 @@ class RepExtractor(nn.Module):
   def forward(self, x):
     rep = self.model.extract_representation(x)
     return rep
+
+
+class MultiModel(nn.Module):
+  def __init__(self, *args):
+    super(MultiModel, self).__init__()
+    self.models = nn.ModuleList()
+    for model in args:
+      self.models.append(model)
+
+  def forward(self, x):
+    for model in self.models:
+      x = model(x)
+    return x
