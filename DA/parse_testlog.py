@@ -32,7 +32,7 @@ def parse_testlog(logname):
           mean_err = float(line.split()[2].split('[')[1].split(']')[0])
         elif line.startswith("Mean normalized error"):
           mean_norm_err = float(line.split()[3].split('[')[1].split(']')[0])
-          print("%s, \t%.4f, \t%.4f" % (ben_name, mean_err, mean_norm_err))
+          print("%s, %.4f, %.4f" % (ben_name, mean_err, mean_norm_err))
           ben_name = None
         pre_line = line
 
