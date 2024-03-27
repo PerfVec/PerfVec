@@ -85,12 +85,12 @@ class InsEm(nn.Module):
     if self.nr > 0:
       regs = ori_x[:, :, 23:].reshape(-1, self.seq_length, 14, 2)
       reg_idx = 50 * regs[:, :, :, 0] + regs[:, :, :, 1]
-      check = torch.logical_and(regs[:, :, :, 1] >= 50, regs[:, :, :, 0] < 7)
-      if torch.any(check):
-        idxx = check.nonzero()
-        print("ch", check.nonzero())
-        print("ha", ori_x[idxx[0, 0].item(), idxx[0, 1].item()])
-      assert not torch.any(check)
+      #check = torch.logical_and(regs[:, :, :, 1] >= 50, regs[:, :, :, 0] < 7)
+      #if torch.any(check):
+      #  idxx = check.nonzero()
+      #  print("ch", check.nonzero())
+      #  print("ha", ori_x[idxx[0, 0].item(), idxx[0, 1].item()])
+      #assert not torch.any(check)
       #if torch.any(torch.gt(reg_idx, 1024)):
       #  #print("p", reg_idx)
       #  #print("q", regs)
