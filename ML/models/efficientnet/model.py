@@ -211,6 +211,7 @@ class E1DNet(nn.Module):
         # Final linear layer
         self._avg_pooling = nn.AdaptiveAvgPool1d(1)
         self._dropout = nn.Dropout(self._global_params.dropout_rate)
+        #self._fc = nn.Linear(out_channels, self._global_params.num_classes, bias=self._global_params.bias)
         self.linear = nn.Linear(out_channels, self._global_params.num_classes, bias=self._global_params.bias)
         self._swish = MemoryEfficientSwish()
 
@@ -331,6 +332,7 @@ class E1DNet(nn.Module):
         """
         x = self.extract_representation(x)
         if self._global_params.include_top:
+            #x = self._fc(x)
             x = self.linear(x)
         return x
 
