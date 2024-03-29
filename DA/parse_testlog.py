@@ -28,6 +28,8 @@ def parse_testlog(logname):
       elif stage == 2:
         if line.startswith("Use the maximum") and ben_name is None:
           ben_name = pre_line.strip()
+        elif line.startswith("Open ") and ben_name is None:
+          ben_name = pre_line.strip()
         elif line.startswith("Mean error"):
           mean_err = float(line.split()[2].split('[')[1].split(']')[0])
         elif line.startswith("Mean normalized error"):
