@@ -68,17 +68,34 @@ def get_representation_dim(cfg, model):
   return rep.shape[1]
 
 
-def NormMSELoss(inp, target, delta=0.1):
-  norm_inp = inp / (target + delta)
-  norm_target = target / (target + delta)
-  return nn.MSELoss(norm_inp, norm_target)
+class NormMSELoss(nn.Module):
+  def __init__(self, delta=0.1):
+    super(NormMSELoss, self).__init__()
+    self.MSELoss = nn.MSELoss()
+    self.delta = delta
+
+  def forward(self, output, target):
+    norm_output = output / (target + self.delta)
+    norm_target = target / (target + self.delta)
+    return self.MSELoss(norm_output, norm_target)
 
 
-def NormL1Loss(inp, target, delta=0.1):
-  norm_inp = inp / (target + delta)
-  norm_target = target / (target + delta)
-  return nn.L1Loss(norm_inp, norm_target)
+class NormL1Loss(nn.Module):
+  def __init__(self, delta=0.1):
+    super(NormL1Loss, self).__init__()
+    self.L1Loss = nn.L1Loss()
+    self.delta = delta
+
+  def forward(self, output, target):
+    norm_output = output / (target + self.delta)
+    norm_target = target / (target + self.delta)
+    return self.L1Loss(norm_output, norm_target)
 
 
-def RMSELoss(inp, target, delta=0.1):
-  return torch.sqrt(nn.MSELoss(inp, target))
+class RMSELoss(nn.Module):
+  def __init__(self):
+    super(RMSELoss, self).__init__()
+    self.MSELoss = nn.MSELoss()
+
+  def forward(self, output, target):
+    return torch.sqrt(self.MSELoss(output, target))
