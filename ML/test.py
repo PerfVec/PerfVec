@@ -384,8 +384,9 @@ def test_main(rank, args):
         print("Warning: standard test does not work correctly with DDP.")
     else:
       test_loader = torch.utils.data.DataLoader(dataset, shuffle=False, **kwargs)
-    if args.select and rank == 0:
-      print("Test with different micro-architecture arrangement.")
+    if args.select:
+      if rank == 0:
+        print("Test with different micro-architecture arrangement.")
       assert hasattr(cfg, 'sel_output')
       assert not args.rep
     else:
