@@ -275,7 +275,7 @@ def get_program_representation(args, cfg, model, device, test_loader, rep_dim, n
     return 0
 
 
-def load_checkpoint(cp_name, init, model_name=None, training=False, optimizer=None):
+def load_checkpoint(cp_name, cfg, init, model_name=None, training=False, optimizer=None):
   assert 'checkpoints/' in cp_name
   cp = torch.load(cp_name, map_location=torch.device('cpu'))
   if model_name is None:
@@ -315,10 +315,10 @@ def test_main(rank, args):
 
   model_init = args.uarch_net or args.uarch_net_unseen
   if len(args.models) == 0:
-    model = load_checkpoint(args.checkpoints, model_init)
+    model = load_checkpoint(args.checkpoints, cfg, model_init)
   else:
     assert len(args.models) == 1
-    model = load_checkpoint(args.checkpoints, model_init, args.models[0])
+    model = load_checkpoint(args.checkpoints, cfg, model_init, args.models[0])
   if rank == 0:
     print("Loaded checkpoint", args.checkpoints)
 
