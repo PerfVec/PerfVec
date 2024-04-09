@@ -69,7 +69,7 @@ def get_representation_dim(cfg, model):
 
 
 class NormMSELoss(nn.Module):
-  def __init__(self, delta=0.1):
+  def __init__(self, delta=1):
     super(NormMSELoss, self).__init__()
     self.MSELoss = nn.MSELoss()
     self.delta = delta
@@ -81,7 +81,7 @@ class NormMSELoss(nn.Module):
 
 
 class NormL1Loss(nn.Module):
-  def __init__(self, delta=0.1):
+  def __init__(self, delta=1):
     super(NormL1Loss, self).__init__()
     self.L1Loss = nn.L1Loss()
     self.delta = delta
