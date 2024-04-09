@@ -23,15 +23,15 @@ from ML.models import *
 
 
 class ModelSet:
-    def __init__(self, idx, name, model, optimizer, scheduler):
+    def __init__(self, idx, name, model, optimizer, scheduler, min_loss):
         self.idx = idx
         self.name = name
         self.model = model
         self.optimizer = optimizer
         self.scheduler = scheduler
+        self.min_loss = min_loss
         self.train_loss = 0
         self.test_loss = 0
-        self.min_loss = float("inf")
 
 
 def train_mul(args, models, device, train_loader, loss_fn, epoch, rank):
@@ -168,52 +168,54 @@ def test_postprocess(args, models, device, epoch, rank, size, time):
         print("Find new minimal loss", ms.test_loss, "to replace", ms.min_loss, "of model", ms.idx)
         ms.min_loss = ms.test_loss
         if not args.no_save_model:
-          save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args, True)
+          save_checkpoint(ms, epoch, args, True)
       if (not args.no_save_model) and epoch % args.save_interval == 0:
-        save_checkpoint(ms.name, ms.model, ms.optimizer, epoch, ms.min_loss, args)
+        save_checkpoint(ms, epoch, args)
 
 
-def save_checkpoint(name, model, optimizer, epoch, best_loss, args, best=False):
-    extra_name = ''
-    if args.lr != 0:
-        extra_name = '_lr' + str(args.lr)
-    if args.loss != "MSE":
-        extra_name += '_lo' + args.loss
-    if best:
-        file_name = generate_model_name(name) + '_' + args.cfg + extra_name + '_best.pt'
-    else:
-        file_name = generate_model_name(name, epoch) + '_' + args.cfg + extra_name + '.pt'
-    saved_dict = {'name': name,
-                  'epoch': epoch,
-                  'best_loss': best_loss,
-                  'optimizer_state_dict': optimizer.state_dict()}
-    if torch.cuda.device_count() > 1:
-        model_dict = {'model_state_dict': model.module.state_dict()}
-    else:
-        model_dict = {'model_state_dict': model.state_dict()}
-    saved_dict.update(model_dict)
-    torch.save(saved_dict, 'checkpoints/' + file_name)
-    print("Saved checkpoint at", 'checkpoints/' + file_name)
-    #torch.save(model, 'models/' + file_name)
-    #print("Saved checkpoint at", 'checkpoints/' + file_name, "and model at", 'models/' + file_name)
+def save_checkpoint(ms, epoch, args, best=False):
+  extra_name = ''
+  if args.lr != 0:
+    extra_name = '_lr' + str(args.lr)
+  if args.loss != "MSE":
+    extra_name += '_lo' + args.loss
+  if best:
+    file_name = generate_model_name(ms.name) + '_' + args.cfg + extra_name + '_best.pt'
+  else:
+    file_name = generate_model_name(ms.name, epoch) + '_' + args.cfg + extra_name + '.pt'
+  saved_dict = {'name': ms.name,
+                'epoch': epoch,
+                'best_loss': ms.min_loss,
+                'optimizer_state_dict': ms.optimizer.state_dict()}
+  if not args.distributed and torch.cuda.device_count() > 1:
+    model_dict = {'model_state_dict': ms.model.module.state_dict()}
+  else:
+    model_dict = {'model_state_dict': ms.model.state_dict()}
+  saved_dict.update(model_dict)
+  if ms.scheduler is not None:
+    sch_dict = {'scheduler_state_dict': ms.scheduler.state_dict()}
+    saved_dict.update(sch_dict)
+  torch.save(saved_dict, 'checkpoints/' + file_name)
+  print("Saved checkpoint at", 'checkpoints/' + file_name)
 
 
-def load_checkpoint(rank, name, model, optimizer, device):
-    assert 'checkpoints/' in name
-    cp = torch.load(name, map_location='cpu')
-    if torch.cuda.device_count() > 1:
-        model.module.load_state_dict(cp['model_state_dict'])
-    else:
-        model.load_state_dict(cp['model_state_dict'])
-    optimizer.load_state_dict(cp['optimizer_state_dict'])
-    #for state in optimizer.state.values():
-    #    for k, v in state.items():
-    #        if torch.is_tensor(v):
-    #            state[k] = v.to(device)
-    start_epoch = cp['epoch']
-    if rank == 0:
-        print("Loaded checkpoint", name)
-    return start_epoch + 1, cp['best_loss']
+def load_checkpoint(rank, name, model):
+  assert 'checkpoints/' in name
+  cp = torch.load(name, map_location='cpu')
+  model.load_state_dict(cp['model_state_dict'])
+  start_epoch = cp['epoch']
+  if rank == 0:
+    print("Loaded checkpoint", name, "at epoch", start_epoch)
+  return start_epoch + 1, cp['best_loss']
+
+
+def load_optimizer_scheduler(name, optimizer, scheduler):
+  assert 'checkpoints/' in name
+  cp = torch.load(name, map_location='cpu')
+  optimizer.load_state_dict(cp['optimizer_state_dict'])
+  if 'scheduler_state_dict' in cp:
+    assert scheduler is not None
+    scheduler.load_state_dict(cp['scheduler_state_dict'])
 
 
 def adjust_learning_rate(optimizer, epoch, lr):
@@ -283,10 +285,15 @@ def main_rank(rank, args):
 
     models = []
     i = 0
+    start_epoch = 1
+    min_loss = float("inf")
     for name in args.models:
         model = eval(name)
         if rank == 0:
             profile_model(cfg, model)
+        if args.checkpoints is not None:
+            assert len(args.models) == 1
+            start_epoch, min_loss = load_checkpoint(rank, args.checkpoints, model)
         device = torch.device("cuda" if use_cuda else "cpu")
         if args.distributed:
             device = rank
@@ -322,10 +329,11 @@ def main_rank(rank, args):
             scheduler = StepLR(optimizer, step_size=args.lr_step)
             if rank == 0:
                 print ('Use a scheduler with a step of %s.' % args.lr_step)
-        models.append(ModelSet(i, name, model, optimizer, scheduler))
+        if args.checkpoints is not None:
+            load_optimizer_scheduler(args.checkpoints, optimizer, scheduler)
+        models.append(ModelSet(i, name, model, optimizer, scheduler, min_loss))
         i += 1
         #ori_lr = optimizer.defaults['lr']
-    start_epoch = 1
     if args.loss == "MSE":
         loss_fn = nn.MSELoss()
     elif args.loss == "L1":
@@ -416,6 +424,7 @@ def main():
                         help='rank of this node (default: 0)')
     parser.add_argument('--gpus', type=int, default=1, metavar='N',
                         help='number of gpus per node (default: 1)')
+    parser.add_argument('--checkpoints', default=None)
     parser.add_argument('models', nargs='*')
     args = parser.parse_args()
 
