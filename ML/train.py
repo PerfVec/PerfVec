@@ -203,6 +203,15 @@ def save_checkpoint(ms, epoch, args, best=False):
 def load_checkpoint(rank, name, model):
   assert 'checkpoints/' in name
   cp = torch.load(name, map_location='cpu')
+  # Address compiled model loading.
+  keys_list = list(cp['model_state_dict'].keys())
+  for key in keys_list:
+    if key.startswith('_orig_mod.'):
+      new_key = key[len('_orig_mod.'):]
+      if new_key.startswith('module.'):
+        new_key = new_key[len('module.'):]
+      cp['model_state_dict'][new_key] = cp['model_state_dict'][key]
+      del cp['model_state_dict'][key]
   model.load_state_dict(cp['model_state_dict'])
   start_epoch = cp['epoch']
   if rank == 0:
@@ -210,13 +219,15 @@ def load_checkpoint(rank, name, model):
   return start_epoch + 1, cp['best_loss']
 
 
-def load_optimizer_scheduler(name, optimizer, scheduler):
+def load_optimizer_scheduler(rank, name, optimizer, scheduler):
   assert 'checkpoints/' in name
   cp = torch.load(name, map_location='cpu')
   optimizer.load_state_dict(cp['optimizer_state_dict'])
   if 'scheduler_state_dict' in cp:
     assert scheduler is not None
     scheduler.load_state_dict(cp['scheduler_state_dict'])
+    if rank == 0:
+      print("Loaded scheduler.")
 
 
 def adjust_learning_rate(optimizer, epoch, lr):
@@ -331,7 +342,7 @@ def main_rank(rank, args):
             if rank == 0:
                 print ('Use a scheduler with a step of %s.' % args.lr_step)
         if args.checkpoints is not None:
-            load_optimizer_scheduler(args.checkpoints, optimizer, scheduler)
+            load_optimizer_scheduler(rank, args.checkpoints, optimizer, scheduler)
         models.append(ModelSet(i, name, model, optimizer, scheduler, min_loss))
         i += 1
         #ori_lr = optimizer.defaults['lr']
