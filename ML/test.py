@@ -284,6 +284,15 @@ def load_checkpoint(cp_name, cfg, init, model_name=None, training=False, optimiz
     model = eval(model_name)
   if init:
     model.init_paras()
+  # Address compiled model loading.
+  keys_list = list(cp['model_state_dict'].keys())
+  for key in keys_list:
+    if key.startswith('_orig_mod.'):
+      new_key = key[len('_orig_mod.'):]
+      if new_key.startswith('module.'):
+        new_key = new_key[len('module.'):]
+      cp['model_state_dict'][new_key] = cp['model_state_dict'][key]
+      del cp['model_state_dict'][key]
   model.load_state_dict(cp['model_state_dict'])
   if training:
     assert optimizer is not None

@@ -187,7 +187,8 @@ def save_checkpoint(ms, epoch, args, best=False):
                 'epoch': epoch,
                 'best_loss': ms.min_loss,
                 'optimizer_state_dict': ms.optimizer.state_dict()}
-  if not args.distributed and torch.cuda.device_count() > 1:
+  #model = getattr(ms.model, '_orig_mod', ms.model)
+  if args.distributed or torch.cuda.device_count() > 1:
     model_dict = {'model_state_dict': ms.model.module.state_dict()}
   else:
     model_dict = {'model_state_dict': ms.model.state_dict()}
