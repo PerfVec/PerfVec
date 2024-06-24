@@ -333,6 +333,7 @@ def test_main(rank, args):
 
   if args.rep:
     rep_dim = get_representation_dim(cfg, model)
+    cfg_num = 1
   elif hasattr(cfg, 'sel_cfg_num'):
     cfg_num = cfg.sel_cfg_num
   else:
