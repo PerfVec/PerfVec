@@ -333,7 +333,6 @@ def test_main(rank, args):
 
   if args.rep:
     rep_dim = get_representation_dim(cfg, model)
-    cfg_num = 1
   elif hasattr(cfg, 'sel_cfg_num'):
     cfg_num = cfg.sel_cfg_num
   else:
@@ -412,7 +411,8 @@ def test_main(rank, args):
     if args.rep:
       all_rep = torch.zeros(len(cfg.sim_datasets), rep_dim)
       torch.set_printoptions(threshold=1000)
-    res = torch.zeros(len(cfg.sim_datasets), 3, cfg_num, cfg.tgt_length)
+    else:
+      res = torch.zeros(len(cfg.sim_datasets), 3, cfg_num, cfg.tgt_length)
     for i in range(len(cfg.sim_datasets)):
       name = cfg.sim_datasets[i][0].replace(cfg.data_set_dir, '').replace(".in.mmap.norm", '').replace(".in.nmmap", '')
       if rank == 0:
@@ -439,7 +439,7 @@ def test_main(rank, args):
       name = args.checkpoints.replace("checkpoints/", "res/prep_%s_" % args.cfg)
       print("Save program representations to", name, flush=True)
       torch.save(all_rep, name)
-    if args.save_sim and rank == 0:
+    if args.sim and args.save_sim and rank == 0:
       name = args.checkpoints.replace("checkpoints/", "res/simres_%s_" % args.cfg)
       print("Save simulation results to", name, flush=True)
       torch.save(res, name)
