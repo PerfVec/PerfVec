@@ -21,8 +21,6 @@ def trace2nmmap(filename, is_norm, mean, std):
       length = int(output[0].split()[2])
     except subprocess.CalledProcessError:
       print("Error when extracting features of ", filename)
-      output = proc.stderr
-      log_file.write(output)
       return 1
     in_file = filename.replace('.txt', '.in')
     if is_norm:
