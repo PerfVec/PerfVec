@@ -82,4 +82,4 @@ if __name__ == '__main__':
     output = os.path.join(os.path.dirname(args.fname[0]), "all")
   output += ".mmap"
 
-  inst2mmap(fname, args.length, output, args.start, args.end, args.feature, args.target)
+  inst2mmap(args.fname, args.length, output, args.start, args.end, args.feature, args.target)
