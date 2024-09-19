@@ -12,7 +12,7 @@ cd DP; make in; make out; cd ..
 microarchitectures using gem5.
 See [gem5.md](gem5.md) for how to use gem5 for trace generation.
 
-   [UPDATE] This script: [Tutorials/run_gem5_multipl.py](../Tutorials/run_gem5_multipl.py) is provided for generating multiple traces at once. Should use with caution. This script could generate a large amount of files and consume large memory space.
+   [UPDATE] This script: [Tutorials/run_gem5_multiple.py](../Tutorials/run_gem5_multiple.py) is provided for generating multiple traces at once. Should use with caution. This script could generate a large amount of files and consume large memory space.
 
    Example usage:
    ```
