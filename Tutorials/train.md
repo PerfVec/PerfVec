@@ -12,7 +12,9 @@ cd DP; make in; make out; cd ..
 microarchitectures using gem5.
 See [gem5.md](gem5.md) for how to use gem5 for trace generation.
 
-3. Generate the PerfVec model input from gem5 instruction execution traces.
+   [UPDATE] This script: [Tutorials/run_gem5_multipl.py](../Tutorials/run_gem5_multipl.py) is provided for generating multiple traces at once. Should use with caution. This script could generate a large amount of files and consume large memory space.
+
+4. Generate the PerfVec model input from gem5 instruction execution traces.
 To generate the input of a specific program, find a trace of it, and perform
 the following commands.
 
