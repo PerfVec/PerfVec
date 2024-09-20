@@ -1,4 +1,5 @@
 import os
+import random
 import argparse
 
 # 4-digits serial number for each sample by default, i.e. max <# of samples> = 9999
@@ -37,12 +38,17 @@ if __name__ == '__main__':
   # NOTE: change accordingly
   home_dir    = os.path.expanduser( '~' )
   gem5_dir    = os.path.join(home_dir, "playground", "gem5")
+  perfvec_dir  = os.path.join(home_dir, "PerfVec")
   #prog_cmd      = os.path.join(perfvec_dir, "Tutorials", "mm") + " 8 8 8"      
   prog_cmd      = os.path.join(gem5_dir, "tests", "test-progs", "hello", "bin", "arm", "linux", "hello")       
   
   gem5_opt_file = os.path.join(gem5_dir, "build", "ARM", "gem5.opt")
   gem5_config_file   = os.path.join(gem5_dir, "configs", "example", "arm", "starter_se.py")
-  gem5_cpu_params    = "--cpu=timing"
+
+  s = 2024
+  random.seed(s)
+  r = random.randint(-2147483648, 2147483647)
+  gem5_cpu_params    = "--cpu=timing -r="+str(r)
   
   parser = argparse.ArgumentParser(description="trace generation driver, specify number of samples on random uarch. configurations.")
   parser.add_argument('--num_samples', type=int, required=True)
