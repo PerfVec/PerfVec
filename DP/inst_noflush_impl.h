@@ -33,7 +33,7 @@ unordered_map<Addr, Tick> dataLineStMap;
 #endif
 
 //#define TICK_STEP 500
-#define TICK_STEP 100
+#define TICK_STEP 1
 #define MAX_DIS 1000
 #define MAX_LDIS 100000000
 
@@ -95,6 +95,7 @@ inline int getReg(int C, int I) { return C * MAXREGIDX + I + 1; }
 
 Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace, bool isSingleTrace) {
   ROBtrace >> dec >> isFault >> sqIdx;
+  
   if (ROBtrace.eof()) {
     if (!isSingleTrace) {
       int tmp;
@@ -104,6 +105,7 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace, bool isSingleTrace) {
     return FILE_END;
   }
   ifstream *trace = &ROBtrace;
+  
   Tick completeTick2, outTick2;
   if (sqIdx == -99) {
     Tick startTick;
@@ -115,10 +117,13 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace, bool isSingleTrace) {
     ROBtrace >> inTick >> completeTick >> outTick;
     ROBtrace >> decodeTick >> renameTick >> dispatchTick >> issueTick;
     assert(outTick >= completeTick);
+
     if (isSingleTrace) {
       ROBtrace >> storeTick >> sqOutTick;
     } else if (sqIdx != -1 && !isFault && ROBtrace.peek() != '\n') {
       ROBtrace >> storeTick >> sqOutTick;
+      // storeTick = 0;
+      // sqOutTick = 0;
     } else if (sqIdx != -1 && !isFault) {
       int isFault2;
       long sqIdx2;
@@ -153,11 +158,8 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace, bool isSingleTrace) {
     dispatchTick /= TICK_STEP;
     issueTick /= TICK_STEP;
   }
-
-  // Read instruction type and etc.
   *trace >> op >> isMicroOp >> isCondCtrl >> isUncondCtrl >> isDirectCtrl >>
-      isSquashAfter >> isSerializeAfter >> isSerializeBefore;
-  *trace >> isAtomic >> isStoreConditional >> isRdBar >> isWrBar >> isQuiesce >>
+      isSquashAfter >> isSerializeAfter >> isSerializeBefore >> isAtomic >> isStoreConditional >> isRdBar >> isWrBar >> isQuiesce >>
       isNonSpeculative;
   assert((isMicroOp == 0 || isMicroOp == 1) &&
          (isCondCtrl == 0 || isCondCtrl == 1) &&
@@ -220,6 +222,7 @@ Tick Inst::read(ifstream &ROBtrace, ifstream &SQtrace, bool isSingleTrace) {
   }
 
   assert(!ROBtrace.eof() && !SQtrace.eof());
+  
   return READ_INST;
 }
 
@@ -318,7 +321,8 @@ void Inst::dumpTargets(Tick startTick, double *out) {
   dumpTargets(startTick, out, memLdIdx, memStIdx, lastFetchTick, lastCommitTick,
               lastSqOutTick, lastDecodeTick, lastRenameTick, lastDispatchTick);
 }
-
+// dumpTargets(startTick, out, memLdIdx, memStIdx, lastFetchTick, lastCommitTick,
+//               lastSqOutTick, lastDecodeTick, lastRenameTick, lastDispatchTick);
 void Inst::dumpTargets(Tick startTick, double *out, Tick &memLdIdx,
                        Tick &memStIdx, Tick &lastFetchTick,
                        Tick &lastCommitTick, Tick &lastSqOutTick,
