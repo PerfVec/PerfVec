@@ -81,13 +81,93 @@ struct Inst {
       return false;
   }
 
-  bool isLoad() { return (op == 47); }
-  bool isStore() { return (op == 48); }
+  bool isLoad() { return (op == 52 || op == 54 || op == 58 || op == 60 || op == 62 || op == 64 || op == 66 || op == 68 || op == 69); }
+  bool isStore() { return (op == 53 || op == 55 || op == 57 || op == 59 || op == 61 || op == 63 || op == 65 || op == 67 || op == 70); }
+  
 
   void dump(Tick startTick, double *out);
   void dumpTargets(Tick startTick, double *out);
   void dumpTargets(Tick startTick, double *out, Tick &memLdIdx, Tick &memStIdx, Tick &lastFetchTick, Tick &lastCommitTick, Tick &lastSqOutTick, Tick &lastDecodeTick, Tick &lastRenameTick, Tick &lastDispatchTick);
   void dumpFeatures(Tick startTick, double *out);
+  
+  void print() const {
+        cout << "Operation:" << endl;
+        cout << "  isFault: " << isFault << endl;
+        cout << "  op: " << op << endl;
+        cout << "  isMicroOp: " << isMicroOp << endl;
+        cout << "  isCondCtrl: " << isCondCtrl << endl;
+        cout << "  isUncondCtrl: " << isUncondCtrl << endl;
+        cout << "  isDirectCtrl: " << isDirectCtrl << endl;
+        cout << "  isSquashAfter: " << isSquashAfter << endl;
+        cout << "  isSerializeAfter: " << isSerializeAfter << endl;
+        cout << "  isSerializeBefore: " << isSerializeBefore << endl;
+        cout << "  isAtomic: " << isAtomic << endl;
+        cout << "  isStoreConditional: " << isStoreConditional << endl;
+        cout << "  isMemBar: " << isMemBar << endl;
+        cout << "  isRdBar: " << isRdBar << endl;
+        cout << "  isWrBar: " << isWrBar << endl;
+        cout << "  isQuiesce: " << isQuiesce << endl;
+        cout << "  isNonSpeculative: " << isNonSpeculative << endl;
+
+        cout << "Registers:" << endl;
+        cout << "  srcNum: " << srcNum << endl;
+        cout << "  destNum: " << destNum << endl;
+        cout << "  srcClass: ";
+        for (int i = 0; i < SRCREGNUM; ++i) cout << srcClass[i] << " ";
+        cout << endl;
+        cout << "  srcIndex: ";
+        for (int i = 0; i < SRCREGNUM; ++i) cout << srcIndex[i] << " ";
+        cout << endl;
+        cout << "  destClass: ";
+        for (int i = 0; i < DSTREGNUM; ++i) cout << destClass[i] << " ";
+        cout << endl;
+        cout << "  destIndex: ";
+        for (int i = 0; i < DSTREGNUM; ++i) cout << destIndex[i] << " ";
+        cout << endl;
+
+        cout << "Data access:" << endl;
+        cout << "  isAddr: " << isAddr << endl;
+        cout << "  addr: " << addr << endl;
+        cout << "  addrEnd: " << addrEnd << endl;
+        cout << "  size: " << size << endl;
+        cout << "  depth: " << depth << endl;
+        cout << "  dwalkDepth: ";
+        for (int i = 0; i < 3; ++i) cout << dwalkDepth[i] << " ";
+        cout << endl;
+        cout << "  dwalkAddr: ";
+        for (int i = 0; i < 3; ++i) cout << dwalkAddr[i] << " ";
+        cout << endl;
+        cout << "  dWritebacks: ";
+        for (int i = 0; i < 3; ++i) cout << dWritebacks[i] << " ";
+        cout << endl;
+        cout << "  sqIdx: " << sqIdx << endl;
+
+        cout << "Instruction access:" << endl;
+        cout << "  pc: " << pc << endl;
+        cout << "  isBranching: " << isBranching << endl;
+        cout << "  isMisPredict: " << isMisPredict << endl;
+        cout << "  fetchDepth: " << fetchDepth << endl;
+        cout << "  iwalkDepth: ";
+        for (int i = 0; i < 3; ++i) cout << iwalkDepth[i] << " ";
+        cout << endl;
+        cout << "  iwalkAddr: ";
+        for (int i = 0; i < 3; ++i) cout << iwalkAddr[i] << " ";
+        cout << endl;
+        cout << "  iWritebacks: ";
+        for (int i = 0; i < 2; ++i) cout << iWritebacks[i] << " ";
+        cout << endl;
+
+        cout << "Timing:" << endl;
+        cout << "  inTick: " << inTick << endl;
+        cout << "  completeTick: " << completeTick << endl;
+        cout << "  outTick: " << outTick << endl;
+        cout << "  decodeTick: " << decodeTick << endl;
+        cout << "  renameTick: " << renameTick << endl;
+        cout << "  dispatchTick: " << dispatchTick << endl;
+        cout << "  issueTick: " << issueTick << endl;
+        cout << "  storeTick: " << storeTick << endl;
+        cout << "  sqOutTick: " << sqOutTick << endl;
+    }
 };
 
 #endif
