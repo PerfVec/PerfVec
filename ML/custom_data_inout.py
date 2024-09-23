@@ -15,6 +15,8 @@ class MemMappedDataset(Dataset):
                                 shape=(in_size, cfg.input_length))
         self.out_arr = np.memmap(cfg.get_out_name(file_name), dtype=cfg.target_format, mode='r',
                                  shape=(out_size, cfg.ori_tgt_length * cfg.cfg_num))
+        self.seq_length = cfg.seq_length
+        self.input_length = cfg.input_length
         assert in_size >= out_size
         if end < start or end > out_size:
             raise AttributeError("End is illegal.")
@@ -28,13 +30,12 @@ class MemMappedDataset(Dataset):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-
         idx += self.start
-        if idx < seq_length:
-            x = np.zeros((seq_length, input_length))
-            x[seq_length-(idx+1):seq_length, :] = np.copy(self.in_arr[0:idx+1, :])
+        if idx < self.seq_length:
+            x = np.zeros((self.seq_length, self.input_length))
+            x[self.seq_length-(idx+1):self.seq_length, :] = np.copy(self.in_arr[0:idx+1, :])
         else:
-            x = np.copy(self.in_arr[idx+1-seq_length:idx+1, :])
+            x = np.copy(self.in_arr[idx+1-self.seq_length:idx+1, :])
         y = np.copy(self.out_arr[idx, :])
         x = torch.from_numpy(x.astype('f'))
         y = torch.from_numpy(y.astype('f'))
@@ -54,6 +55,10 @@ class CombinedMMDataset(Dataset):
         # Calculate start and end for each dataset.
         self.file_num = file_num
         self.size = end - start
+
+        print('Size', self.size)
+        print('Total Size', total_size)
+
         frac = self.size / total_size
         self.mm_sets = []
         self.starts = []
@@ -111,6 +116,7 @@ class MemMappedBatchDataset(Dataset):
       self.out_arr = np.memmap(cfg.get_out_name(file_name), dtype=cfg.target_format, mode='r',
                                shape=(out_size, cfg.ori_tgt_length * cfg.cfg_num))
       self.batchsize = mm_batch_size
+
       if end < start:
         raise AttributeError("End is illegal.")
       elif end * self.batchsize > out_use_size:
