@@ -64,3 +64,8 @@ See [ML/models](../ML/models) for various model options, or implement your own.
 python -m ML.train --cfg=<config name> --train-size=<# instructions for training> \\
   --epochs=<# epochs> --batch-size=<batch size> --sbatch <model instantiation>
 ```
+
+One example is the following ( modify your config file accordingly, [CFG/helloworld.py](../CFG/helloworld.py) as an example, before use): 
+```
+python -m ML.train --cfg=helloworld --train-size=5632 --epochs=10 --batch-size=128 "InsLSTM(256,2,narchs=1,bias=False)"
+```
