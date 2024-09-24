@@ -11,6 +11,7 @@ def inst2mmap(fnames, num, output, start, end, is_feature, is_target, printout=s
     data_item_format = feature_format
   elif is_target:
     inst_length = cfg_num * ori_tgt_length
+    inst_length = 16 # dev only, need to be removed later
     data_item_format = target_format
   else:
     inst_length = input_length + tgt_length
@@ -82,4 +83,4 @@ if __name__ == '__main__':
     output = os.path.join(os.path.dirname(args.fname[0]), "all")
   output += ".mmap"
 
-  inst2mmap(fname, args.length, output, args.start, args.end, args.feature, args.target)
+  inst2mmap(args.fname, args.length, output, args.start, args.end, args.feature, args.target)
