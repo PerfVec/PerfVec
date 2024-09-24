@@ -1,7 +1,7 @@
 import numpy as np
 
 # Data set configuration.
-data_set_dir = 'tracefiles/'
+data_set_dir = '/home/khsu/gem5/'   # modify accordingly
 data_set_idx = 1
 datasets = [
   (data_set_dir + 'trace.in.nmmap', 5908, 5908),
@@ -34,12 +34,12 @@ ori_tgt_length = 16
 # valid_end = (validbatchnum + validbatchsize) * ori_batch_size
 test_start = 4000
 test_end = 5000
-valid_start = 5001
-valid_end = 5907
+valid_start = 5120  # has to be multiple of mm_batch_size, which is 512
+valid_end = 5632    # same
 print('Valid Start',valid_start)
 print('Valid End', valid_end)
 
-input_length = 50
+input_length = 51 # 51 is good, 50 seems to be fine sometimes, need further checking
 tgt_length = 16 
 cfg_num = 1
 seq_length = 256

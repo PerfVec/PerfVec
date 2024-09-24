@@ -177,6 +177,7 @@ class CombinedMMBDataset(Dataset):
         if end < start or end > total_size:
             raise AttributeError("End is illegal.")
         if start % mm_batch_size != 0 or end % mm_batch_size != 0:
+            print("start: ", start, ", mm_batch_size: ", mm_batch_size, ", end: ", end)
             raise AttributeError("Start or end is not aligned.")
         start = int(start / mm_batch_size)
         end = int(end / mm_batch_size)
