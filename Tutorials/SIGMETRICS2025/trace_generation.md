@@ -13,6 +13,7 @@
     - [3.1.1 Clone ```gem5``` on your server.](#311-clone-gem5-on-your-server)
     - [3.1.2 Build gem5 simulator](#312-build-gem5-simulator)
   - [3.2 Launch gem5 simulation & trace generation](#32-launch-gem5-simulation--trace-generation)
+- [Step 4: Model testing](#step-4-model-testing)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -98,3 +99,7 @@ For example,
 ```
 
 There will be two output files, ```trace.txt``` and ```trace.sq.txt```. Refer to [trace.md](../trace.md) for more detail.
+
+# Step 4: Model testing
+Continue to the Jupyter Notebook on Colab: [https://colab.research.google.com/drive/1ViJtzsbbUFXkSEYsdgne9iJsfCZq0UvJ#scrollTo=96f_pEaCG1k5](https://colab.research.google.com/drive/1ViJtzsbbUFXkSEYsdgne9iJsfCZq0UvJ#scrollTo=96f_pEaCG1k5) 
+for the hands-on activity about model prediction.
