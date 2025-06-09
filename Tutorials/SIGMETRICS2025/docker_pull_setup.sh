@@ -9,7 +9,7 @@ IMAGE_NAME=${PROJ}_image
 CONTAINER_NAME=${PROJ}_container
 
 # output dir mounting
-DST_DIR="${GITTOP}/Tutorials/2025_SIGMETRICS"
+DST_DIR="${GITTOP}/Tutorials/SIGMETRICS2025"
 DST_TARGET_DIR="/home"
 
 # build dockerfile to generate docker image
